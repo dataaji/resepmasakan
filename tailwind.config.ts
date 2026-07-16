@@ -6,8 +6,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["var(--font-fredoka)", "sans-serif"],
-        sans: ["var(--font-poppins)", "sans-serif"],
+        display: ["Fredoka", "sans-serif"],
+        sans: ["Poppins", "sans-serif"],
       },
       colors: {
         primary: "#FF5A36",

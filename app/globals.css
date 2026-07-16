@@ -74,7 +74,7 @@ input,
 select,
 textarea,
 button {
-  font-family: var(--font-poppins), sans-serif;
+  font-family: Poppins, sans-serif;
 }
 input:focus,
 select:focus,
