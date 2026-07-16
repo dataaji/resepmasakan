@@ -7,6 +7,6 @@ const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
   createServer((req, res) => handle(req, res)).listen(port, () => {
-    console.log(`ResepKita ready on port ${port}`);
+    console.log(`Kulinara ready on port ${port}`);
   });
 });

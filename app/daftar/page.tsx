@@ -27,7 +27,7 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-[420px] px-6 pb-16 pt-12">
       <div className="rounded-xl4 border p-8" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
         <h1 className="font-display m-0 mb-1.5 text-2xl text-ink">Daftar</h1>
-        <p className="m-0 mb-6 text-sm text-muted">Buat akun ResepKita baru</p>
+        <p className="m-0 mb-6 text-sm text-muted">Buat akun Kulinara baru</p>
 
         {error && (
           <p className="mb-4 rounded-lg px-3.5 py-2.5 text-sm" style={{ background: "#FADADA", color: "#791F1F" }}>

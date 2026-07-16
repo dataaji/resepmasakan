@@ -78,7 +78,7 @@ function HomeContent() {
           Jelajah Resep
         </h1>
         <p className="m-0 text-[15px] text-muted">
-          Temukan resep favorit dari komunitas ResepKita
+          Temukan resep favorit dari komunitas Kulinara
         </p>
       </div>
 

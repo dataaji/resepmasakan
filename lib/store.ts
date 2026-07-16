@@ -109,7 +109,7 @@ export const useAppStore = create<AppState>()(
           document.documentElement.setAttribute("data-theme", next);
         }
         if (typeof window !== "undefined") {
-          window.localStorage.setItem("resepkita-theme", next);
+          window.localStorage.setItem("kulinara-theme", next);
         }
       },
 
@@ -455,7 +455,7 @@ export const useAppStore = create<AppState>()(
       },
     }),
     {
-      name: "resepkita-store",
+      name: "kulinara-store",
       skipHydration: true,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

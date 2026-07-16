@@ -64,7 +64,7 @@ export default function Header() {
           className="font-display text-[25px] font-bold"
           style={{ color: "#FF5A36" }}
         >
-          Resep<span style={{ color: "var(--ink)" }}>Kita</span>
+          Kulinara
         </span>
       </Link>
 

@@ -11,7 +11,7 @@ export const BANNERS: Banner[] = [
   {
     label: "Rekomendasi Minggu Ini",
     title: "Rendang Daging Sapi favorit komunitas",
-    subtitle: "Resep autentik dengan rating tertinggi di ResepKita",
+    subtitle: "Resep autentik dengan rating tertinggi di Kulinara",
     ctaLabel: "Lihat Resep",
     gradient: "linear-gradient(120deg,#D94A24,#FF5A36)",
     href: "/resep?id=r-rendang",

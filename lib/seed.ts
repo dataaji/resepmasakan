@@ -6,8 +6,8 @@ const now = Date.now();
 export const seedUsers: User[] = [
   {
     id: "u-admin",
-    name: "Admin ResepKita",
-    email: "admin@resepkita.id",
+    name: "Admin Kulinara",
+    email: "admin@kulinara.id",
     password: "admin123",
     role: "admin",
     status: "active",

@@ -27,7 +27,7 @@ export default function RankingPage() {
     <div className="mx-auto max-w-[900px] px-8 pb-16 pt-7">
       <div className="mb-5.5">
         <h1 className="font-display m-0 mb-1 text-[32px] text-ink">Peringkat Resep</h1>
-        <p className="m-0 text-[15px] text-muted">Resep terbaik menurut komunitas ResepKita</p>
+        <p className="m-0 text-[15px] text-muted">Resep terbaik menurut komunitas Kulinara</p>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2.5">

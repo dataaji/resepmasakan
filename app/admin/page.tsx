@@ -57,7 +57,7 @@ export default function AdminPage() {
     <div className="mx-auto max-w-[1000px] px-8 pb-16 pt-7">
       <div className="mb-7">
         <h1 className="font-display m-0 mb-1 text-[32px] text-ink">Panel Admin</h1>
-        <p className="m-0 text-[15px] text-muted">Moderasi konten dan kelola pengguna ResepKita</p>
+        <p className="m-0 text-[15px] text-muted">Moderasi konten dan kelola pengguna Kulinara</p>
       </div>
 
       <Section title="Laporan Resep">

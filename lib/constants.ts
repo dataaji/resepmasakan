@@ -29,12 +29,12 @@ export const PLACEHOLDER_GRADIENTS = [
 
 export const FAQ_ITEMS: { q: string; a: string }[] = [
   {
-    q: "Apakah ResepKita gratis digunakan?",
-    a: "Ya, semua fitur dasar ResepKita — membuat, membagikan, dan menjelajah resep — gratis digunakan.",
+    q: "Apakah Kulinara gratis digunakan?",
+    a: "Ya, semua fitur dasar Kulinara — membuat, membagikan, dan menjelajah resep — gratis digunakan.",
   },
   {
     q: "Kenapa saya harus verifikasi email?",
-    a: "Verifikasi email diperlukan sebelum kamu bisa membagikan resep, memberi rating, atau berkomentar. Ini membantu menjaga kualitas komunitas ResepKita.",
+    a: "Verifikasi email diperlukan sebelum kamu bisa membagikan resep, memberi rating, atau berkomentar. Ini membantu menjaga kualitas komunitas Kulinara.",
   },
   {
     q: "Apa itu resep 'Modifikasi'?",

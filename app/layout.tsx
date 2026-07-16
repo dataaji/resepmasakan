@@ -17,14 +17,14 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "ResepKita",
+  title: "Kulinara",
   description: "Simpan, temukan, dan bagikan resep — dari dapur ke dapur.",
 };
 
 const themeInitScript = `
 (function () {
   try {
-    var theme = localStorage.getItem("resepkita-theme");
+    var theme = localStorage.getItem("kulinara-theme");
     if (theme === "dark" || theme === "light") {
       document.documentElement.setAttribute("data-theme", theme);
     }

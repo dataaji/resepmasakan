@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
     <div className="mx-auto max-w-[420px] px-6 pb-16 pt-12">
       <div className="rounded-xl4 border p-8" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
         <h1 className="font-display m-0 mb-1.5 text-2xl text-ink">Masuk Admin</h1>
-        <p className="m-0 mb-6 text-sm text-muted">Khusus untuk tim moderasi ResepKita</p>
+        <p className="m-0 mb-6 text-sm text-muted">Khusus untuk tim moderasi Kulinara</p>
 
         {error && (
           <p className="mb-4 rounded-lg px-3.5 py-2.5 text-sm" style={{ background: "#FADADA", color: "#791F1F" }}>
@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="admin@resepkita.id"
+          placeholder="admin@kulinara.id"
           className="mb-4 w-full rounded-xl2 border-2 px-3.5 py-2.5 text-[15px]"
           style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
         />
@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
       </div>
 
       <div className="mt-4 rounded-xl2 border border-dashed px-4 py-3 text-xs text-muted2" style={{ borderColor: "var(--input-border)" }}>
-        Mode prototipe — akun admin contoh: <b>admin@resepkita.id</b> / admin123
+        Mode prototipe — akun admin contoh: <b>admin@kulinara.id</b> / admin123
       </div>
     </div>
   );

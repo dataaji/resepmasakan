@@ -25,7 +25,7 @@ export default function LoginPage() {
     <div className="mx-auto max-w-[420px] px-6 pb-16 pt-12">
       <div className="rounded-xl4 border p-8" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
         <h1 className="font-display m-0 mb-1.5 text-2xl text-ink">Masuk</h1>
-        <p className="m-0 mb-6 text-sm text-muted">Masuk ke akun ResepKita kamu</p>
+        <p className="m-0 mb-6 text-sm text-muted">Masuk ke akun Kulinara kamu</p>
 
         {error && (
           <p className="mb-4 rounded-lg px-3.5 py-2.5 text-sm" style={{ background: "#FADADA", color: "#791F1F" }}>
@@ -71,7 +71,7 @@ export default function LoginPage() {
       </div>
 
       <div className="mt-4 rounded-xl2 border border-dashed px-4 py-3 text-xs text-muted2" style={{ borderColor: "var(--input-border)" }}>
-        Mode prototipe — akun contoh: <b>sari@contoh.id</b> / sari123, admin: <b>admin@resepkita.id</b> / admin123
+        Mode prototipe — akun contoh: <b>sari@contoh.id</b> / sari123, admin: <b>admin@kulinara.id</b> / admin123
       </div>
     </div>
   );
