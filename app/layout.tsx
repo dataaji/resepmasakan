@@ -1,0 +1,52 @@
+import type { Metadata } from "next";
+import { Fredoka, Poppins } from "next/font/google";
+import "./globals.css";
+import Header from "@/components/Header";
+import StoreInit from "@/components/StoreInit";
+
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-fredoka",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
+});
+
+export const metadata: Metadata = {
+  title: "ResepKita",
+  description: "Simpan, temukan, dan bagikan resep — dari dapur ke dapur.",
+};
+
+const themeInitScript = `
+(function () {
+  try {
+    var theme = localStorage.getItem("resepkita-theme");
+    if (theme === "dark" || theme === "light") {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+  } catch (e) {}
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="id" className={`${fredoka.variable} ${poppins.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="font-sans">
+        <StoreInit />
+        <Header />
+        {children}
+      </body>
+    </html>
+  );
+}
