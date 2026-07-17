@@ -8,7 +8,6 @@ import {
   isLikedBy,
   isBookmarkedBy,
 } from "@/lib/selectors";
-import { CATEGORIES } from "@/lib/constants";
 import { formatCookTime, formatRupiah } from "@/lib/utils";
 import { Recipe } from "@/lib/types";
 import RecipePhoto from "./RecipePhoto";
@@ -32,23 +31,19 @@ export default function RecipeCard({
   onDelete?: () => void;
 }) {
   const router = useRouter();
-  const currentUserId = useAppStore((s) => s.currentUserId);
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
+  const profile = useAppStore((s) => s.profile);
   const rating = useAppStore((s) => recipeRatingAvg(s, recipe.id));
   const likes = useAppStore((s) => recipeLikeCount(s, recipe.id));
-  const liked = useAppStore((s) => isLikedBy(s, currentUserId, recipe.id));
+  const liked = useAppStore((s) => isLikedBy(s, profile?.id ?? null, recipe.id));
   const bookmarked = useAppStore((s) =>
-    isBookmarkedBy(s, currentUserId, recipe.id)
+    isBookmarkedBy(s, profile?.id ?? null, recipe.id)
   );
   const toggleLike = useAppStore((s) => s.toggleLike);
   const toggleBookmark = useAppStore((s) => s.toggleBookmark);
   const togglePrivacy = useAppStore((s) => s.togglePrivacy);
 
-  const category = CATEGORIES.find((c) => c.value === recipe.category);
   const diff = DIFF_COLORS[recipe.difficulty];
-  const likeDisabled = !currentUser || !currentUser.emailVerified;
+  const likeDisabled = !profile;
 
   function open() {
     router.push(`/resep?id=${recipe.id}`);
@@ -62,7 +57,7 @@ export default function RecipeCard({
     >
       <div className="relative aspect-[4/3] w-full">
         <RecipePhoto
-          src={recipe.imageDataUrl}
+          src={recipe.imageUrl}
           gradientIndex={recipe.placeholderIndex}
           alt={recipe.title}
         />
@@ -77,6 +72,10 @@ export default function RecipeCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              if (!profile) {
+                router.push("/masuk");
+                return;
+              }
               toggleBookmark(recipe.id);
             }}
             className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full"
@@ -121,7 +120,7 @@ export default function RecipeCard({
             <button
               type="button"
               disabled={likeDisabled}
-              title="Verifikasi email untuk menyukai resep"
+              title={likeDisabled ? "Masuk untuk menyukai resep" : undefined}
               onClick={(e) => {
                 e.stopPropagation();
                 toggleLike(recipe.id);

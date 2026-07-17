@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, DIFFICULTIES, UNIT_GROUPS } from "@/lib/constants";
-import { Category, Difficulty, Recipe } from "@/lib/types";
-import { RecipeInput } from "@/lib/store";
+import { Category, Difficulty, Recipe, RecipeInput } from "@/lib/types";
 import ChipGroup from "@/components/ChipGroup";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -60,12 +59,12 @@ export default function RecipeForm({
 }: {
   headerLabel: string;
   initial?: Recipe;
-  onSubmit: (input: RecipeInput) => void;
+  onSubmit: (input: RecipeInput) => Promise<void> | void;
 }) {
   const router = useRouter();
 
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [photo, setPhoto] = useState<string | null>(initial?.imageDataUrl ?? null);
+  const [photo, setPhoto] = useState<string | null>(initial?.imageUrl ?? null);
   const [category, setCategory] = useState<Category>(initial?.category ?? "Makanan");
   const [cookTime, setCookTime] = useState(initial ? String(initial.cookTimeMinutes) : "");
   const [servings, setServings] = useState(initial ? String(initial.servings) : "");
@@ -79,6 +78,7 @@ export default function RecipeForm({
   const [steps, setSteps] = useState<StepRow[]>(toStepRows(initial));
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [isPublic, setIsPublic] = useState(initial?.isPublic ?? false);
+  const [saving, setSaving] = useState(false);
 
   function updateIngredient(key: string, patch: Partial<IngredientRow>) {
     setIngredients((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -87,12 +87,11 @@ export default function RecipeForm({
     setSteps((rows) => rows.map((r) => (r.key === key ? { ...r, text } : r)));
   }
 
-  function handleSave() {
+  async function handleSave() {
     const input: RecipeInput = {
       title: title.trim(),
       category,
       imageDataUrl: photo,
-      placeholderIndex: initial?.placeholderIndex ?? Math.floor(Math.random() * 6),
       cookTimeMinutes: parseInt(cookTime, 10) || 0,
       servings: parseInt(servings, 10) || 1,
       difficulty,
@@ -110,10 +109,15 @@ export default function RecipeForm({
             : r.unit,
           secukupnya: r.secukupnya,
         })),
-      steps: steps.filter((r) => r.text.trim()).map((r) => ({ n: 0, text: r.text.trim() })),
+      steps: steps.filter((r) => r.text.trim()).map((r) => ({ text: r.text.trim() })),
       isPublic,
     };
-    onSubmit(input);
+    setSaving(true);
+    try {
+      await onSubmit(input);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -351,12 +355,12 @@ export default function RecipeForm({
         </button>
         <button
           type="button"
-          disabled={!title.trim()}
+          disabled={!title.trim() || saving}
           onClick={handleSave}
           className="rounded-2xl border-none px-6.5 py-3 text-sm font-semibold text-white disabled:opacity-40"
           style={{ background: "#FF5A36" }}
         >
-          Simpan Resep
+          {saving ? "Menyimpan..." : "Simpan Resep"}
         </button>
       </div>
     </div>

@@ -1,65 +1,74 @@
-import { Recipe, Category, Difficulty } from "./types";
-import { useAppStore } from "./store";
+import { Recipe, Category, Difficulty, Profile, Rating, Like, Comment } from "./types";
 import { average } from "./utils";
 
-type Store = ReturnType<typeof useAppStore.getState>;
+interface DataBundle {
+  recipes: Recipe[];
+  ratings: Rating[];
+  likes: Like[];
+  comments: Comment[];
+  profiles: Profile[];
+}
 
-export function ratingsFor(s: Store, recipeId: string) {
+export function ratingsFor(s: DataBundle, recipeId: string) {
   return s.ratings.filter((r) => r.recipeId === recipeId);
 }
 
-export function recipeRatingAvg(s: Store, recipeId: string): number {
+export function recipeRatingAvg(s: DataBundle, recipeId: string): number {
   return average(ratingsFor(s, recipeId).map((r) => r.stars));
 }
 
-export function recipeRatingCount(s: Store, recipeId: string): number {
+export function recipeRatingCount(s: DataBundle, recipeId: string): number {
   return ratingsFor(s, recipeId).length;
 }
 
-export function recipeLikeCount(s: Store, recipeId: string): number {
+export function recipeLikeCount(s: DataBundle, recipeId: string): number {
   return s.likes.filter((l) => l.recipeId === recipeId).length;
 }
 
-export function commentsFor(s: Store, recipeId: string) {
+export function commentsFor(s: DataBundle, recipeId: string) {
   return s.comments
     .filter((c) => c.recipeId === recipeId)
     .sort((a, b) => a.createdAt - b.createdAt);
 }
 
-export function isLikedBy(s: Store, userId: string | null, recipeId: string): boolean {
+export function isLikedBy(
+  s: { likes: Like[] },
+  userId: string | null,
+  recipeId: string
+): boolean {
   if (!userId) return false;
   return s.likes.some((l) => l.userId === userId && l.recipeId === recipeId);
 }
 
-export function isBookmarkedBy(s: Store, userId: string | null, recipeId: string): boolean {
+export function isBookmarkedBy(
+  s: { bookmarks: { userId: string; recipeId: string }[] },
+  userId: string | null,
+  recipeId: string
+): boolean {
   if (!userId) return false;
   return s.bookmarks.some((b) => b.userId === userId && b.recipeId === recipeId);
 }
 
-export function ratingByUser(s: Store, userId: string | null, recipeId: string) {
+export function ratingByUser(s: DataBundle, userId: string | null, recipeId: string) {
   if (!userId) return undefined;
   return s.ratings.find((r) => r.userId === userId && r.recipeId === recipeId);
 }
 
-export function isVerifiedCommenter(s: Store, userId: string, recipeId: string): boolean {
+export function isVerifiedCommenter(s: DataBundle, userId: string, recipeId: string): boolean {
   return s.ratings.some(
-    (r) => r.userId === userId && r.recipeId === recipeId && !!r.photoDataUrl
+    (r) => r.userId === userId && r.recipeId === recipeId && !!r.photoUrl
   );
 }
 
-export function authorName(s: Store, userId: string): string {
-  return s.users.find((u) => u.id === userId)?.name ?? "Pengguna";
+export function authorName(s: { profiles: Profile[] }, userId: string): string {
+  return s.profiles.find((p) => p.id === userId)?.name ?? "Pengguna";
 }
 
-export function userById(s: Store, userId: string) {
-  return s.users.find((u) => u.id === userId);
-}
-
-export function cookPhotosFor(s: Store, recipeId: string) {
+export function cookPhotosFor(s: DataBundle, recipeId: string) {
   return ratingsFor(s, recipeId)
-    .filter((r) => r.photoDataUrl)
+    .filter((r) => r.photoUrl)
     .map((r) => ({
-      photoDataUrl: r.photoDataUrl as string,
+      photoUrl: r.photoUrl as string,
       author: authorName(s, r.userId),
     }));
 }
@@ -73,11 +82,11 @@ export interface HomeFilters {
   sort: "rating" | "like" | "terbaru" | "termurah";
 }
 
-export function publicRecipes(s: Store): Recipe[] {
+export function publicRecipes(s: DataBundle): Recipe[] {
   return s.recipes.filter((r) => r.isPublic);
 }
 
-export function filterAndSortHome(s: Store, f: HomeFilters): Recipe[] {
+export function filterAndSortHome(s: DataBundle, f: HomeFilters): Recipe[] {
   let list = publicRecipes(s);
 
   const search = f.search.trim().toLowerCase();
@@ -131,7 +140,7 @@ export function filterAndSortHome(s: Store, f: HomeFilters): Recipe[] {
 const SEVEN_DAYS = 7 * 86400000;
 
 export function rankingList(
-  s: Store,
+  s: DataBundle,
   period: "all" | "trending",
   category: Category | "Semua"
 ): Recipe[] {

@@ -29,6 +29,13 @@ function CookModeContent() {
   const router = useRouter();
   const recipeId = searchParams.get("id") ?? "";
   const recipe = useAppStore((s) => s.recipes.find((r) => r.id === recipeId));
+  const loadRecipeDetail = useAppStore((s) => s.loadRecipeDetail);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!recipeId) return;
+    loadRecipeDetail(recipeId).finally(() => setLoaded(true));
+  }, [recipeId, loadRecipeDetail]);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
@@ -57,7 +64,7 @@ function CookModeContent() {
   if (!recipe) {
     return (
       <div className="mx-auto max-w-[600px] px-8 py-16 text-center text-muted">
-        Resep tidak ditemukan.
+        {loaded ? "Resep tidak ditemukan." : "Memuat resep..."}
       </div>
     );
   }

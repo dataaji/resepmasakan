@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { initials } from "@/lib/utils";
@@ -10,25 +10,33 @@ import EmptyState from "@/components/EmptyState";
 export default function ProfilePage() {
   const router = useRouter();
   const [tab, setTab] = useState<"created" | "saved">("created");
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
+  const profile = useAppStore((s) => s.profile);
+  const authLoading = useAppStore((s) => s.authLoading);
+  const loadMine = useAppStore((s) => s.loadMine);
+  const loadBookmarks = useAppStore((s) => s.loadBookmarks);
+  const deleteRecipe = useAppStore((s) => s.deleteRecipe);
+
   const created = useAppStore((s) =>
-    s.recipes.filter((r) => r.userId === s.currentUserId)
+    s.recipes.filter((r) => r.userId === s.profile?.id)
   );
   const saved = useAppStore((s) => {
-    if (!s.currentUserId) return [];
+    if (!s.profile) return [];
     const ids = s.bookmarks
-      .filter((b) => b.userId === s.currentUserId)
+      .filter((b) => b.userId === s.profile!.id)
       .map((b) => b.recipeId);
     return s.recipes.filter((r) => ids.includes(r.id));
   });
-  const deleteRecipe = useAppStore((s) => s.deleteRecipe);
-  const hasHydrated = useAppStore((s) => s.hasHydrated);
+  const [loaded, setLoaded] = useState(false);
 
-  if (!hasHydrated) return null;
+  useEffect(() => {
+    if (profile) {
+      Promise.all([loadMine(), loadBookmarks()]).finally(() => setLoaded(true));
+    }
+  }, [profile, loadMine, loadBookmarks]);
 
-  if (!currentUser) {
+  if (authLoading) return null;
+
+  if (!profile) {
     return (
       <div className="mx-auto max-w-[600px] px-8 py-16 text-center">
         <p className="mb-3 text-[15px] text-muted">Masuk dulu untuk melihat profilmu.</p>
@@ -49,20 +57,25 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-[1200px] px-8 pb-16 pt-7">
       <div className="mb-7 flex items-center gap-4">
-        <div
-          className="flex h-16 w-16 flex-none items-center justify-center rounded-full text-xl font-bold text-white"
-          style={{ background: "linear-gradient(135deg,#FF5A36,#FFC93C)" }}
-        >
-          {initials(currentUser.name)}
-        </div>
+        {profile.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={profile.avatarUrl}
+            alt={profile.name}
+            referrerPolicy="no-referrer"
+            className="h-16 w-16 flex-none rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className="flex h-16 w-16 flex-none items-center justify-center rounded-full text-xl font-bold text-white"
+            style={{ background: "linear-gradient(135deg,#FF5A36,#FFC93C)" }}
+          >
+            {initials(profile.name)}
+          </div>
+        )}
         <div>
-          <h1 className="font-display m-0 text-2xl text-ink">{currentUser.name}</h1>
-          <p className="m-0 text-sm text-muted">{currentUser.email}</p>
-          {!currentUser.emailVerified && (
-            <p className="m-0 mt-1 text-xs font-semibold" style={{ color: "#A6740A" }}>
-              Email belum diverifikasi
-            </p>
-          )}
+          <h1 className="font-display m-0 text-2xl text-ink">{profile.name}</h1>
+          <p className="m-0 text-sm text-muted">Masuk dengan akun Google</p>
         </div>
       </div>
 
@@ -75,7 +88,9 @@ export default function ProfilePage() {
         </TabButton>
       </div>
 
-      {list.length === 0 ? (
+      {!loaded ? (
+        <EmptyState text="Memuat..." />
+      ) : list.length === 0 ? (
         <EmptyState text={tab === "created" ? "Kamu belum punya resep." : "Belum ada resep yang kamu simpan."} />
       ) : (
         <div className="grid gap-5.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>

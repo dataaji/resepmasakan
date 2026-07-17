@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { supabase } from "./supabase";
 import {
-  User,
+  Profile,
   Recipe,
   Like,
   Bookmark,
@@ -9,32 +9,30 @@ import {
   Comment,
   RecipeReport,
   CommentReport,
-  Ingredient,
-  Step,
+  RecipeInput,
 } from "./types";
-import { uid, genVerifyCode } from "./utils";
-import { seedUsers, seedRecipes, seedLikes, seedRatings, seedComments } from "./seed";
-
-type Result = { ok: true } | { ok: false; error: string };
-
-export interface RecipeInput {
-  title: string;
-  category: Recipe["category"];
-  imageDataUrl: string | null;
-  placeholderIndex: number;
-  cookTimeMinutes: number;
-  servings: number;
-  difficulty: Recipe["difficulty"];
-  estimatedCost: number | null;
-  notes: string;
-  ingredients: Omit<Ingredient, "id">[];
-  steps: Omit<Step, "id">[];
-  isPublic: boolean;
-}
+import {
+  rowToProfile,
+  rowToRecipe,
+  rowToLike,
+  rowToBookmark,
+  rowToRating,
+  rowToComment,
+  rowToRecipeReport,
+  rowToCommentReport,
+  recipeInputToRow,
+  upsertById,
+  upsertByPair,
+} from "./db";
+import { uid } from "./utils";
 
 interface AppState {
-  users: User[];
-  currentUserId: string | null;
+  profile: Profile | null;
+  authLoading: boolean;
+  authError: string | null;
+  theme: "light" | "dark";
+
+  profiles: Profile[];
   recipes: Recipe[];
   likes: Like[];
   bookmarks: Bookmark[];
@@ -42,424 +40,542 @@ interface AppState {
   comments: Comment[];
   recipeReports: RecipeReport[];
   commentReports: CommentReport[];
-  theme: "light" | "dark";
-  hasHydrated: boolean;
 
-  setHasHydrated: (v: boolean) => void;
+  publicLoaded: boolean;
+  myReportedRecipeIds: string[];
+  myReportedCommentIds: string[];
+
+  initAuth: () => void;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
   toggleTheme: () => void;
 
-  register: (
-    name: string,
-    email: string,
-    password: string,
-    confirmPassword: string
-  ) => Result & { code?: string };
-  login: (email: string, password: string) => Result;
-  loginAdmin: (email: string, password: string) => Result;
-  verifyEmail: (code: string) => Result;
-  resendCode: () => string | null;
-  logout: () => void;
+  loadPublic: () => Promise<void>;
+  loadRecipeDetail: (id: string) => Promise<void>;
+  loadMine: () => Promise<void>;
+  loadBookmarks: () => Promise<void>;
+  loadAdmin: () => Promise<void>;
 
-  addRecipe: (input: RecipeInput) => string;
-  updateRecipe: (id: string, input: RecipeInput) => void;
-  deleteRecipe: (id: string) => void;
-  togglePrivacy: (id: string) => void;
-  forkRecipe: (id: string) => string | null;
+  uploadPhotoFromDataUrl: (dataUrl: string) => Promise<string | null>;
 
-  toggleLike: (recipeId: string) => void;
-  toggleBookmark: (recipeId: string) => void;
-  submitRating: (
-    recipeId: string,
-    starsValue: number,
-    photoDataUrl: string | null
-  ) => void;
-  addComment: (recipeId: string, text: string) => void;
-  reportRecipe: (recipeId: string, reason: string) => void;
-  reportComment: (commentId: string, reason: string) => void;
+  addRecipe: (input: RecipeInput) => Promise<string | null>;
+  updateRecipe: (id: string, input: RecipeInput) => Promise<void>;
+  deleteRecipe: (id: string) => Promise<void>;
+  togglePrivacy: (id: string) => Promise<void>;
+  forkRecipe: (id: string) => Promise<string | null>;
 
-  resolveRecipeReport: (
-    reportId: string,
-    action: "approve" | "warn" | "delete"
-  ) => void;
-  resolveCommentReport: (reportId: string, action: "ignore" | "delete") => void;
-  suspendUser: (userId: string) => void;
-  banUser: (userId: string) => void;
+  toggleLike: (recipeId: string) => Promise<void>;
+  toggleBookmark: (recipeId: string) => Promise<void>;
+  submitRating: (recipeId: string, stars: number, photoDataUrl: string | null) => Promise<void>;
+  addComment: (recipeId: string, text: string) => Promise<void>;
+  reportRecipe: (recipeId: string, reason: string) => Promise<void>;
+  reportComment: (commentId: string, reason: string) => Promise<void>;
+
+  resolveRecipeReport: (reportId: string, action: "approve" | "warn" | "delete") => Promise<void>;
+  resolveCommentReport: (reportId: string, action: "ignore" | "delete") => Promise<void>;
+  suspendUser: (userId: string) => Promise<void>;
+  banUser: (userId: string) => Promise<void>;
 }
 
-export const useAppStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      users: seedUsers,
-      currentUserId: null,
-      recipes: seedRecipes,
-      likes: seedLikes,
-      bookmarks: [],
-      ratings: seedRatings,
-      comments: seedComments,
-      recipeReports: [],
-      commentReports: [],
-      theme: "light",
-      hasHydrated: false,
+let authInitialized = false;
 
-      setHasHydrated: (v) => set({ hasHydrated: v }),
-      toggleTheme: () => {
-        const next = get().theme === "light" ? "dark" : "light";
-        set({ theme: next });
-        if (typeof document !== "undefined") {
-          document.documentElement.setAttribute("data-theme", next);
-        }
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("kulinara-theme", next);
-        }
-      },
+export const useAppStore = create<AppState>()((set, get) => ({
+  profile: null,
+  authLoading: true,
+  authError: null,
+  theme: "light",
 
-      register: (name, email, password, confirmPassword) => {
-        const trimmedEmail = email.trim().toLowerCase();
-        if (!name.trim() || !trimmedEmail || !password) {
-          return { ok: false, error: "Semua kolom wajib diisi." };
-        }
-        if (password !== confirmPassword) {
-          return { ok: false, error: "Konfirmasi kata sandi tidak cocok." };
-        }
-        if (get().users.some((u) => u.email === trimmedEmail)) {
-          return { ok: false, error: "Email ini sudah terdaftar." };
-        }
-        const code = genVerifyCode();
-        const user: User = {
-          id: uid(),
-          name: name.trim(),
-          email: trimmedEmail,
-          password,
-          role: "user",
-          status: "active",
-          emailVerified: false,
-          verifyCode: code,
-          createdAt: Date.now(),
-        };
-        set((s) => ({ users: [...s.users, user], currentUserId: user.id }));
-        return { ok: true, code };
-      },
+  profiles: [],
+  recipes: [],
+  likes: [],
+  bookmarks: [],
+  ratings: [],
+  comments: [],
+  recipeReports: [],
+  commentReports: [],
 
-      login: (email, password) => {
-        const trimmedEmail = email.trim().toLowerCase();
-        const user = get().users.find(
-          (u) => u.email === trimmedEmail && u.password === password
-        );
-        if (!user) return { ok: false, error: "Email atau kata sandi salah." };
-        if (user.status !== "active") {
-          return {
-            ok: false,
-            error:
-              user.status === "banned"
-                ? "Akun ini telah diblokir."
-                : "Akun ini sedang ditangguhkan.",
-          };
-        }
-        set({ currentUserId: user.id });
-        return { ok: true };
-      },
+  publicLoaded: false,
+  myReportedRecipeIds: [],
+  myReportedCommentIds: [],
 
-      loginAdmin: (email, password) => {
-        const trimmedEmail = email.trim().toLowerCase();
-        const user = get().users.find(
-          (u) => u.email === trimmedEmail && u.password === password
-        );
-        if (!user) return { ok: false, error: "Email atau kata sandi salah." };
-        if (user.role !== "admin") {
-          return { ok: false, error: "Akun ini bukan akun admin." };
-        }
-        set({ currentUserId: user.id });
-        return { ok: true };
-      },
+  initAuth: () => {
+    if (authInitialized) return;
+    authInitialized = true;
 
-      verifyEmail: (code) => {
-        const current = get().users.find((u) => u.id === get().currentUserId);
-        if (!current) return { ok: false, error: "Kamu belum masuk." };
-        if (!code.trim() || code !== current.verifyCode) {
-          return { ok: false, error: "Kode verifikasi salah." };
-        }
-        set((s) => ({
-          users: s.users.map((u) =>
-            u.id === current.id
-              ? { ...u, emailVerified: true, verifyCode: null }
-              : u
-          ),
-        }));
-        return { ok: true };
-      },
-
-      resendCode: () => {
-        const current = get().users.find((u) => u.id === get().currentUserId);
-        if (!current) return null;
-        const code = genVerifyCode();
-        set((s) => ({
-          users: s.users.map((u) =>
-            u.id === current.id ? { ...u, verifyCode: code } : u
-          ),
-        }));
-        return code;
-      },
-
-      logout: () => set({ currentUserId: null }),
-
-      addRecipe: (input) => {
-        const userId = get().currentUserId;
-        if (!userId) return "";
-        const id = uid();
-        const recipe: Recipe = {
-          id,
-          userId,
-          title: input.title,
-          category: input.category,
-          imageDataUrl: input.imageDataUrl,
-          placeholderIndex: input.placeholderIndex,
-          cookTimeMinutes: input.cookTimeMinutes,
-          servings: input.servings,
-          difficulty: input.difficulty,
-          estimatedCost: input.estimatedCost,
-          notes: input.notes,
-          ingredients: input.ingredients.map((i) => ({ ...i, id: uid() })),
-          steps: input.steps.map((s, idx) => ({ ...s, id: uid(), n: idx + 1 })),
-          isPublic: input.isPublic,
-          forkedFromId: null,
-          createdAt: Date.now(),
-        };
-        set((s) => ({ recipes: [...s.recipes, recipe] }));
-        return id;
-      },
-
-      updateRecipe: (id, input) => {
-        set((s) => ({
-          recipes: s.recipes.map((r) =>
-            r.id === id
-              ? {
-                  ...r,
-                  title: input.title,
-                  category: input.category,
-                  imageDataUrl: input.imageDataUrl ?? r.imageDataUrl,
-                  placeholderIndex: input.placeholderIndex,
-                  cookTimeMinutes: input.cookTimeMinutes,
-                  servings: input.servings,
-                  difficulty: input.difficulty,
-                  estimatedCost: input.estimatedCost,
-                  notes: input.notes,
-                  ingredients: input.ingredients.map((i) => ({
-                    ...i,
-                    id: uid(),
-                  })),
-                  steps: input.steps.map((st, idx) => ({
-                    ...st,
-                    id: uid(),
-                    n: idx + 1,
-                  })),
-                  isPublic: input.isPublic,
-                }
-              : r
-          ),
-        }));
-      },
-
-      deleteRecipe: (id) => {
-        set((s) => ({
-          recipes: s.recipes.filter((r) => r.id !== id),
-          likes: s.likes.filter((l) => l.recipeId !== id),
-          bookmarks: s.bookmarks.filter((b) => b.recipeId !== id),
-          ratings: s.ratings.filter((r) => r.recipeId !== id),
-          comments: s.comments.filter((c) => c.recipeId !== id),
-          recipeReports: s.recipeReports.filter((r) => r.recipeId !== id),
-        }));
-      },
-
-      togglePrivacy: (id) => {
-        set((s) => ({
-          recipes: s.recipes.map((r) =>
-            r.id === id ? { ...r, isPublic: !r.isPublic } : r
-          ),
-        }));
-      },
-
-      forkRecipe: (id) => {
-        const userId = get().currentUserId;
-        const source = get().recipes.find((r) => r.id === id);
-        if (!userId || !source) return null;
-        const newId = uid();
-        const recipe: Recipe = {
-          ...source,
-          id: newId,
-          userId,
-          isPublic: false,
-          forkedFromId: source.id,
-          ingredients: source.ingredients.map((i) => ({ ...i, id: uid() })),
-          steps: source.steps.map((st) => ({ ...st, id: uid() })),
-          createdAt: Date.now(),
-        };
-        set((s) => ({ recipes: [...s.recipes, recipe] }));
-        return newId;
-      },
-
-      toggleLike: (recipeId) => {
-        const userId = get().currentUserId;
-        if (!userId) return;
-        const exists = get().likes.some(
-          (l) => l.userId === userId && l.recipeId === recipeId
-        );
-        set((s) => ({
-          likes: exists
-            ? s.likes.filter(
-                (l) => !(l.userId === userId && l.recipeId === recipeId)
-              )
-            : [...s.likes, { userId, recipeId, createdAt: Date.now() }],
-        }));
-      },
-
-      toggleBookmark: (recipeId) => {
-        const userId = get().currentUserId;
-        if (!userId) return;
-        const exists = get().bookmarks.some(
-          (b) => b.userId === userId && b.recipeId === recipeId
-        );
-        set((s) => ({
-          bookmarks: exists
-            ? s.bookmarks.filter(
-                (b) => !(b.userId === userId && b.recipeId === recipeId)
-              )
-            : [...s.bookmarks, { userId, recipeId, createdAt: Date.now() }],
-        }));
-      },
-
-      submitRating: (recipeId, starsValue, photoDataUrl) => {
-        const userId = get().currentUserId;
-        if (!userId) return;
-        set((s) => {
-          const withoutExisting = s.ratings.filter(
-            (r) => !(r.userId === userId && r.recipeId === recipeId)
-          );
-          return {
-            ratings: [
-              ...withoutExisting,
-              {
-                id: uid(),
-                userId,
-                recipeId,
-                stars: starsValue,
-                photoDataUrl,
-                createdAt: Date.now(),
-              },
-            ],
-          };
-        });
-      },
-
-      addComment: (recipeId, text) => {
-        const userId = get().currentUserId;
-        if (!userId || !text.trim()) return;
-        set((s) => ({
-          comments: [
-            ...s.comments,
-            {
-              id: uid(),
-              recipeId,
-              userId,
-              text: text.trim(),
-              createdAt: Date.now(),
-              reported: false,
-              reportReason: "",
-            },
-          ],
-        }));
-      },
-
-      reportRecipe: (recipeId, reason) => {
-        const reporterId = get().currentUserId;
-        if (!reporterId) return;
-        set((s) => ({
-          recipeReports: [
-            ...s.recipeReports,
-            {
-              id: uid(),
-              recipeId,
-              reporterId,
-              reason: reason.trim(),
-              status: "pending",
-              createdAt: Date.now(),
-            },
-          ],
-        }));
-      },
-
-      reportComment: (commentId, reason) => {
-        const reporterId = get().currentUserId;
-        if (!reporterId) return;
-        set((s) => ({
-          comments: s.comments.map((c) =>
-            c.id === commentId
-              ? { ...c, reported: true, reportReason: reason.trim() }
-              : c
-          ),
-          commentReports: [
-            ...s.commentReports,
-            {
-              id: uid(),
-              commentId,
-              reporterId,
-              reason: reason.trim(),
-              status: "pending",
-              createdAt: Date.now(),
-            },
-          ],
-        }));
-      },
-
-      resolveRecipeReport: (reportId, action) => {
-        const report = get().recipeReports.find((r) => r.id === reportId);
-        if (!report) return;
-        if (action === "delete") {
-          get().deleteRecipe(report.recipeId);
-        }
-        set((s) => ({
-          recipeReports: s.recipeReports.map((r) =>
-            r.id === reportId ? { ...r, status: "resolved" } : r
-          ),
-        }));
-      },
-
-      resolveCommentReport: (reportId, action) => {
-        const report = get().commentReports.find((r) => r.id === reportId);
-        if (!report) return;
-        if (action === "delete") {
-          set((s) => ({
-            comments: s.comments.filter((c) => c.id !== report.commentId),
-          }));
-        }
-        set((s) => ({
-          commentReports: s.commentReports.map((r) =>
-            r.id === reportId ? { ...r, status: "resolved" } : r
-          ),
-        }));
-      },
-
-      suspendUser: (userId) => {
-        set((s) => ({
-          users: s.users.map((u) =>
-            u.id === userId ? { ...u, status: "suspended" } : u
-          ),
-        }));
-      },
-
-      banUser: (userId) => {
-        set((s) => ({
-          users: s.users.map((u) =>
-            u.id === userId ? { ...u, status: "banned" } : u
-          ),
-        }));
-      },
-    }),
-    {
-      name: "kulinara-store",
-      skipHydration: true,
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
+    const stored =
+      typeof window !== "undefined" ? window.localStorage.getItem("kulinara-theme") : null;
+    if (stored === "dark" || stored === "light") {
+      set({ theme: stored });
+      document.documentElement.setAttribute("data-theme", stored);
     }
-  )
-);
+
+    async function applySession(userId: string | null) {
+      if (!userId) {
+        set({ profile: null, authLoading: false });
+        return;
+      }
+      const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+      if (!data) {
+        set({ profile: null, authLoading: false });
+        return;
+      }
+      const profile = rowToProfile(data);
+      if (profile.status !== "active") {
+        await supabase.auth.signOut();
+        set({
+          profile: null,
+          authLoading: false,
+          authError:
+            profile.status === "banned"
+              ? "Akun ini telah diblokir oleh moderator."
+              : "Akun ini sedang ditangguhkan oleh moderator.",
+        });
+        return;
+      }
+      set((s) => ({
+        profile,
+        authLoading: false,
+        authError: null,
+        profiles: upsertById(s.profiles, [profile]),
+      }));
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      applySession(data.session?.user?.id ?? null);
+    });
+    supabase.auth.onAuthStateChange((_event, session) => {
+      applySession(session?.user?.id ?? null);
+    });
+  },
+
+  signInWithGoogle: async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: typeof window !== "undefined" ? window.location.origin : undefined },
+    });
+  },
+
+  signOut: async () => {
+    await supabase.auth.signOut();
+    set({ profile: null, bookmarks: [], recipeReports: [], commentReports: [] });
+  },
+
+  toggleTheme: () => {
+    const next = get().theme === "light" ? "dark" : "light";
+    set({ theme: next });
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", next);
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("kulinara-theme", next);
+    }
+  },
+
+  loadPublic: async () => {
+    const [recipesRes, ratingsRes, likesRes] = await Promise.all([
+      supabase
+        .from("recipes")
+        .select("*, profiles!user_id(id, name, avatar_url, role, status)")
+        .eq("is_public", true),
+      supabase.from("ratings").select("*"),
+      supabase.from("likes").select("*"),
+    ]);
+    set((s) => ({
+      recipes: upsertById(s.recipes, (recipesRes.data ?? []).map(rowToRecipe)),
+      ratings: upsertById(s.ratings, (ratingsRes.data ?? []).map(rowToRating)),
+      likes: upsertByPair(s.likes, (likesRes.data ?? []).map(rowToLike)),
+      profiles: upsertById(
+        s.profiles,
+        (recipesRes.data ?? [])
+          .map((r: any) => r.profiles)
+          .filter(Boolean)
+          .map(rowToProfile)
+      ),
+      publicLoaded: true,
+    }));
+    const me = get().profile;
+    if (me) {
+      const { data } = await supabase.from("bookmarks").select("*").eq("user_id", me.id);
+      set((s) => ({ bookmarks: upsertByPair(s.bookmarks, (data ?? []).map(rowToBookmark)) }));
+    }
+  },
+
+  loadRecipeDetail: async (id: string) => {
+    const recipeRes = await supabase
+      .from("recipes")
+      .select("*, profiles!user_id(id, name, avatar_url, role, status)")
+      .eq("id", id)
+      .maybeSingle();
+    if (!recipeRes.data) return;
+
+    const recipe = rowToRecipe(recipeRes.data);
+    const [ratingsRes, likesRes, commentsRes, forkedRes] = await Promise.all([
+      supabase
+        .from("ratings")
+        .select("*, profiles!user_id(id, name, avatar_url, role, status)")
+        .eq("recipe_id", id),
+      supabase.from("likes").select("*").eq("recipe_id", id),
+      supabase
+        .from("comments")
+        .select("*, profiles!user_id(id, name, avatar_url, role, status)")
+        .eq("recipe_id", id)
+        .order("created_at"),
+      recipe.forkedFromId
+        ? supabase
+            .from("recipes")
+            .select("*, profiles!user_id(id, name, avatar_url, role, status)")
+            .eq("id", recipe.forkedFromId)
+            .maybeSingle()
+        : Promise.resolve({ data: null } as any),
+    ]);
+
+    const joinedProfiles = [
+      recipeRes.data.profiles,
+      forkedRes.data?.profiles,
+      ...(ratingsRes.data ?? []).map((r: any) => r.profiles),
+      ...(commentsRes.data ?? []).map((c: any) => c.profiles),
+    ]
+      .filter(Boolean)
+      .map(rowToProfile);
+
+    set((s) => ({
+      recipes: upsertById(
+        s.recipes,
+        [recipe, ...(forkedRes.data ? [rowToRecipe(forkedRes.data)] : [])]
+      ),
+      ratings: upsertById(s.ratings, (ratingsRes.data ?? []).map(rowToRating)),
+      likes: upsertByPair(
+        s.likes.filter((l) => l.recipeId !== id),
+        (likesRes.data ?? []).map(rowToLike)
+      ),
+      comments: upsertById(s.comments, (commentsRes.data ?? []).map(rowToComment)),
+      profiles: upsertById(s.profiles, joinedProfiles),
+    }));
+
+    const me = get().profile;
+    if (me) {
+      const { data } = await supabase
+        .from("bookmarks")
+        .select("*")
+        .eq("user_id", me.id)
+        .eq("recipe_id", id);
+      set((s) => ({ bookmarks: upsertByPair(s.bookmarks, (data ?? []).map(rowToBookmark)) }));
+    }
+  },
+
+  loadMine: async () => {
+    const me = get().profile;
+    if (!me) return;
+    const [recipesRes, ratingsRes, likesRes] = await Promise.all([
+      supabase.from("recipes").select("*").eq("user_id", me.id),
+      supabase.from("ratings").select("*"),
+      supabase.from("likes").select("*"),
+    ]);
+    set((s) => ({
+      recipes: upsertById(s.recipes, (recipesRes.data ?? []).map(rowToRecipe)),
+      ratings: upsertById(s.ratings, (ratingsRes.data ?? []).map(rowToRating)),
+      likes: upsertByPair(s.likes, (likesRes.data ?? []).map(rowToLike)),
+    }));
+  },
+
+  loadBookmarks: async () => {
+    const me = get().profile;
+    if (!me) return;
+    const bookmarksRes = await supabase.from("bookmarks").select("*").eq("user_id", me.id);
+    const bookmarks = (bookmarksRes.data ?? []).map(rowToBookmark);
+    const ids = bookmarks.map((b) => b.recipeId);
+    if (ids.length > 0) {
+      const recipesRes = await supabase
+        .from("recipes")
+        .select("*, profiles!user_id(id, name, avatar_url, role, status)")
+        .in("id", ids);
+      set((s) => ({
+        recipes: upsertById(s.recipes, (recipesRes.data ?? []).map(rowToRecipe)),
+        profiles: upsertById(
+          s.profiles,
+          (recipesRes.data ?? [])
+            .map((r: any) => r.profiles)
+            .filter(Boolean)
+            .map(rowToProfile)
+        ),
+      }));
+    }
+    set((s) => ({
+      bookmarks: upsertByPair(
+        s.bookmarks.filter((b) => b.userId !== me.id),
+        bookmarks
+      ),
+    }));
+  },
+
+  loadAdmin: async () => {
+    const [recipeReportsRes, commentReportsRes, profilesRes, recipesRes, commentsRes] =
+      await Promise.all([
+        supabase.from("recipe_reports").select("*"),
+        supabase.from("comment_reports").select("*"),
+        supabase.from("profiles").select("*"),
+        supabase.from("recipes").select("*"),
+        supabase.from("comments").select("*"),
+      ]);
+    set((s) => ({
+      recipeReports: (recipeReportsRes.data ?? []).map(rowToRecipeReport),
+      commentReports: (commentReportsRes.data ?? []).map(rowToCommentReport),
+      profiles: upsertById(s.profiles, (profilesRes.data ?? []).map(rowToProfile)),
+      recipes: upsertById(s.recipes, (recipesRes.data ?? []).map(rowToRecipe)),
+      comments: upsertById(s.comments, (commentsRes.data ?? []).map(rowToComment)),
+    }));
+  },
+
+  uploadPhotoFromDataUrl: async (dataUrl: string) => {
+    const me = get().profile;
+    if (!me) return null;
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const path = `${me.id}/${Date.now()}-${uid()}.jpg`;
+      const { error } = await supabase.storage
+        .from("recipe-photos")
+        .upload(path, blob, { contentType: blob.type || "image/jpeg" });
+      if (error) return null;
+      const { data } = supabase.storage.from("recipe-photos").getPublicUrl(path);
+      return data.publicUrl;
+    } catch {
+      return null;
+    }
+  },
+
+  addRecipe: async (input) => {
+    const me = get().profile;
+    if (!me) return null;
+    let imageUrl: string | null = null;
+    if (input.imageDataUrl) {
+      imageUrl = input.imageDataUrl.startsWith("data:")
+        ? await get().uploadPhotoFromDataUrl(input.imageDataUrl)
+        : input.imageDataUrl;
+    }
+    const { data, error } = await supabase
+      .from("recipes")
+      .insert(recipeInputToRow(input, imageUrl, me.id))
+      .select("*")
+      .single();
+    if (error || !data) return null;
+    set((s) => ({ recipes: upsertById(s.recipes, [rowToRecipe(data)]) }));
+    return data.id;
+  },
+
+  updateRecipe: async (id, input) => {
+    const me = get().profile;
+    if (!me) return;
+    const existing = get().recipes.find((r) => r.id === id);
+    let imageUrl: string | null = existing?.imageUrl ?? null;
+    if (input.imageDataUrl) {
+      imageUrl = input.imageDataUrl.startsWith("data:")
+        ? (await get().uploadPhotoFromDataUrl(input.imageDataUrl)) ?? imageUrl
+        : input.imageDataUrl;
+    }
+    const row = recipeInputToRow(input, imageUrl, me.id);
+    const { data } = await supabase.from("recipes").update(row).eq("id", id).select("*").single();
+    if (data) set((s) => ({ recipes: upsertById(s.recipes, [rowToRecipe(data)]) }));
+  },
+
+  deleteRecipe: async (id) => {
+    await supabase.from("recipes").delete().eq("id", id);
+    set((s) => ({
+      recipes: s.recipes.filter((r) => r.id !== id),
+      likes: s.likes.filter((l) => l.recipeId !== id),
+      bookmarks: s.bookmarks.filter((b) => b.recipeId !== id),
+      ratings: s.ratings.filter((r) => r.recipeId !== id),
+      comments: s.comments.filter((c) => c.recipeId !== id),
+    }));
+  },
+
+  togglePrivacy: async (id) => {
+    const recipe = get().recipes.find((r) => r.id === id);
+    if (!recipe) return;
+    const next = !recipe.isPublic;
+    set((s) => ({
+      recipes: s.recipes.map((r) => (r.id === id ? { ...r, isPublic: next } : r)),
+    }));
+    await supabase.from("recipes").update({ is_public: next }).eq("id", id);
+  },
+
+  forkRecipe: async (id) => {
+    const me = get().profile;
+    const source = get().recipes.find((r) => r.id === id);
+    if (!me || !source) return null;
+    const { data, error } = await supabase
+      .from("recipes")
+      .insert({
+        user_id: me.id,
+        title: source.title,
+        category: source.category,
+        image_url: source.imageUrl,
+        cook_time_minutes: source.cookTimeMinutes,
+        servings: source.servings,
+        difficulty: source.difficulty,
+        estimated_cost: source.estimatedCost,
+        notes: source.notes,
+        ingredients: source.ingredients.map((i) => ({
+          name: i.name,
+          qty: i.qty,
+          unit: i.unit,
+          secukupnya: i.secukupnya,
+        })),
+        steps: source.steps.map((st) => st.text),
+        is_public: false,
+        forked_from_id: source.id,
+      })
+      .select("*")
+      .single();
+    if (error || !data) return null;
+    set((s) => ({ recipes: upsertById(s.recipes, [rowToRecipe(data)]) }));
+    return data.id;
+  },
+
+  toggleLike: async (recipeId) => {
+    const me = get().profile;
+    if (!me) return;
+    const exists = get().likes.some((l) => l.userId === me.id && l.recipeId === recipeId);
+    if (exists) {
+      set((s) => ({
+        likes: s.likes.filter((l) => !(l.userId === me.id && l.recipeId === recipeId)),
+      }));
+      await supabase.from("likes").delete().eq("user_id", me.id).eq("recipe_id", recipeId);
+    } else {
+      set((s) => ({
+        likes: [...s.likes, { userId: me.id, recipeId, createdAt: Date.now() }],
+      }));
+      await supabase.from("likes").insert({ user_id: me.id, recipe_id: recipeId });
+    }
+  },
+
+  toggleBookmark: async (recipeId) => {
+    const me = get().profile;
+    if (!me) return;
+    const exists = get().bookmarks.some((b) => b.userId === me.id && b.recipeId === recipeId);
+    if (exists) {
+      set((s) => ({
+        bookmarks: s.bookmarks.filter((b) => !(b.userId === me.id && b.recipeId === recipeId)),
+      }));
+      await supabase.from("bookmarks").delete().eq("user_id", me.id).eq("recipe_id", recipeId);
+    } else {
+      set((s) => ({
+        bookmarks: [...s.bookmarks, { userId: me.id, recipeId, createdAt: Date.now() }],
+      }));
+      await supabase.from("bookmarks").insert({ user_id: me.id, recipe_id: recipeId });
+    }
+  },
+
+  submitRating: async (recipeId, stars, photoDataUrl) => {
+    const me = get().profile;
+    if (!me) return;
+    let photoUrl: string | null = null;
+    if (photoDataUrl) {
+      photoUrl = photoDataUrl.startsWith("data:")
+        ? await get().uploadPhotoFromDataUrl(photoDataUrl)
+        : photoDataUrl;
+    }
+    const existing = get().ratings.find(
+      (r) => r.userId === me.id && r.recipeId === recipeId
+    );
+    const { data } = await supabase
+      .from("ratings")
+      .upsert(
+        {
+          ...(existing ? { id: existing.id } : {}),
+          user_id: me.id,
+          recipe_id: recipeId,
+          stars,
+          photo_url: photoUrl ?? existing?.photoUrl ?? null,
+        },
+        { onConflict: "user_id,recipe_id" }
+      )
+      .select("*")
+      .single();
+    if (data) {
+      set((s) => ({
+        ratings: upsertById(
+          s.ratings.filter((r) => !(r.userId === me.id && r.recipeId === recipeId)),
+          [rowToRating(data)]
+        ),
+      }));
+    }
+  },
+
+  addComment: async (recipeId, text) => {
+    const me = get().profile;
+    if (!me || !text.trim()) return;
+    const { data } = await supabase
+      .from("comments")
+      .insert({ recipe_id: recipeId, user_id: me.id, text: text.trim() })
+      .select("*")
+      .single();
+    if (data) {
+      set((s) => ({ comments: upsertById(s.comments, [rowToComment(data)]) }));
+    }
+  },
+
+  reportRecipe: async (recipeId, reason) => {
+    const me = get().profile;
+    if (!me) return;
+    await supabase
+      .from("recipe_reports")
+      .insert({ recipe_id: recipeId, reporter_id: me.id, reason: reason.trim() });
+    set((s) => ({ myReportedRecipeIds: [...s.myReportedRecipeIds, recipeId] }));
+  },
+
+  reportComment: async (commentId, reason) => {
+    const me = get().profile;
+    if (!me) return;
+    await supabase
+      .from("comment_reports")
+      .insert({ comment_id: commentId, reporter_id: me.id, reason: reason.trim() });
+    set((s) => ({ myReportedCommentIds: [...s.myReportedCommentIds, commentId] }));
+  },
+
+  resolveRecipeReport: async (reportId, action) => {
+    const report = get().recipeReports.find((r) => r.id === reportId);
+    if (!report) return;
+    if (action === "delete") {
+      await get().deleteRecipe(report.recipeId);
+    }
+    await supabase.from("recipe_reports").update({ status: "resolved" }).eq("id", reportId);
+    set((s) => ({
+      recipeReports: s.recipeReports.map((r) =>
+        r.id === reportId ? { ...r, status: "resolved" } : r
+      ),
+    }));
+  },
+
+  resolveCommentReport: async (reportId, action) => {
+    const report = get().commentReports.find((r) => r.id === reportId);
+    if (!report) return;
+    if (action === "delete") {
+      await supabase.from("comments").delete().eq("id", report.commentId);
+      set((s) => ({ comments: s.comments.filter((c) => c.id !== report.commentId) }));
+    }
+    await supabase.from("comment_reports").update({ status: "resolved" }).eq("id", reportId);
+    set((s) => ({
+      commentReports: s.commentReports.map((r) =>
+        r.id === reportId ? { ...r, status: "resolved" } : r
+      ),
+    }));
+  },
+
+  suspendUser: async (userId) => {
+    await supabase.from("profiles").update({ status: "suspended" }).eq("id", userId);
+    set((s) => ({
+      profiles: s.profiles.map((p) =>
+        p.id === userId ? { ...p, status: "suspended" as const } : p
+      ),
+    }));
+  },
+
+  banUser: async (userId) => {
+    await supabase.from("profiles").update({ status: "banned" }).eq("id", userId);
+    set((s) => ({
+      profiles: s.profiles.map((p) =>
+        p.id === userId ? { ...p, status: "banned" as const } : p
+      ),
+    }));
+  },
+}));

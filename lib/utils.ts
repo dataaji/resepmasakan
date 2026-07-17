@@ -2,10 +2,6 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-export function genVerifyCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";

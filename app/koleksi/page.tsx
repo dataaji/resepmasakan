@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import RecipeCard from "@/components/RecipeCard";
@@ -7,21 +8,27 @@ import EmptyState from "@/components/EmptyState";
 
 export default function SavedPage() {
   const router = useRouter();
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
-  const hasHydrated = useAppStore((s) => s.hasHydrated);
+  const profile = useAppStore((s) => s.profile);
+  const authLoading = useAppStore((s) => s.authLoading);
+  const loadBookmarks = useAppStore((s) => s.loadBookmarks);
   const recipes = useAppStore((s) => {
-    if (!s.currentUserId) return [];
+    if (!s.profile) return [];
     const ids = s.bookmarks
-      .filter((b) => b.userId === s.currentUserId)
+      .filter((b) => b.userId === s.profile!.id)
       .map((b) => b.recipeId);
     return s.recipes.filter((r) => ids.includes(r.id));
   });
+  const [loaded, setLoaded] = useState(false);
 
-  if (!hasHydrated) return null;
+  useEffect(() => {
+    if (profile) {
+      loadBookmarks().finally(() => setLoaded(true));
+    }
+  }, [profile, loadBookmarks]);
 
-  if (!currentUser) {
+  if (authLoading) return null;
+
+  if (!profile) {
     return (
       <div className="mx-auto max-w-[600px] px-8 py-16 text-center">
         <p className="mb-3 text-[15px] text-muted">Masuk dulu untuk melihat koleksimu.</p>
@@ -44,7 +51,9 @@ export default function SavedPage() {
         <p className="m-0 text-[15px] text-muted">Resep yang kamu simpan</p>
       </div>
 
-      {recipes.length === 0 ? (
+      {!loaded ? (
+        <EmptyState text="Memuat koleksimu..." />
+      ) : recipes.length === 0 ? (
         <EmptyState text="Belum ada resep yang kamu simpan." />
       ) : (
         <div className="grid gap-5.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>

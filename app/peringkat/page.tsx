@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
-import { rankingList, recipeRatingAvg, recipeRatingCount, authorName } from "@/lib/selectors";
+import {
+  rankingList,
+  recipeRatingAvg,
+  recipeRatingCount,
+  authorName,
+} from "@/lib/selectors";
 import { CATEGORIES } from "@/lib/constants";
 import { Category } from "@/lib/types";
 import { formatCookTime } from "@/lib/utils";
@@ -21,7 +26,20 @@ export default function RankingPage() {
   const [period, setPeriod] = useState<"all" | "trending">("all");
   const [category, setCategory] = useState<Category | "Semua">("Semua");
 
+  const loadPublic = useAppStore((s) => s.loadPublic);
+  const publicLoaded = useAppStore((s) => s.publicLoaded);
+
+  useEffect(() => {
+    loadPublic();
+  }, [loadPublic]);
+
   const list = useAppStore((s) => rankingList(s, period, category));
+  const ratings = useAppStore((s) => s.ratings);
+  const likes = useAppStore((s) => s.likes);
+  const comments = useAppStore((s) => s.comments);
+  const profiles = useAppStore((s) => s.profiles);
+  const recipes = useAppStore((s) => s.recipes);
+  const bundle = { recipes, ratings, likes, comments, profiles };
 
   return (
     <div className="mx-auto max-w-[900px] px-8 pb-16 pt-7">
@@ -61,13 +79,15 @@ export default function RankingPage() {
         })}
       </div>
 
-      {list.length === 0 ? (
+      {!publicLoaded ? (
+        <EmptyState text="Memuat peringkat..." />
+      ) : list.length === 0 ? (
         <EmptyState text="Tidak ada resep untuk kategori ini." />
       ) : (
         <div className="flex flex-col gap-3">
           {list.map((recipe, i) => {
-            const rating = recipeRatingAvg(useAppStore.getState(), recipe.id);
-            const count = recipeRatingCount(useAppStore.getState(), recipe.id);
+            const rating = recipeRatingAvg(bundle, recipe.id);
+            const count = recipeRatingCount(bundle, recipe.id);
             return (
               <div
                 key={recipe.id}
@@ -86,14 +106,14 @@ export default function RankingPage() {
                   {i + 1}
                 </span>
                 <div className="h-[60px] w-[60px] flex-none overflow-hidden rounded-xl2">
-                  <RecipePhoto src={recipe.imageDataUrl} gradientIndex={recipe.placeholderIndex} alt={recipe.title} />
+                  <RecipePhoto src={recipe.imageUrl} gradientIndex={recipe.placeholderIndex} alt={recipe.title} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="m-0 truncate text-[15px] font-semibold text-ink">{recipe.title}</h3>
                   </div>
                   <p className="m-0 text-xs text-muted">
-                    oleh {authorName(useAppStore.getState(), recipe.userId)} &middot; {formatCookTime(recipe.cookTimeMinutes)}
+                    oleh {authorName({ profiles }, recipe.userId)} &middot; {formatCookTime(recipe.cookTimeMinutes)}
                   </p>
                 </div>
                 <div className="flex-none text-right">

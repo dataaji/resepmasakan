@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
@@ -16,7 +16,6 @@ import {
   authorName,
   cookPhotosFor,
 } from "@/lib/selectors";
-import { CATEGORIES } from "@/lib/constants";
 import { formatCookTime, formatRupiah, initials, timeAgo } from "@/lib/utils";
 import RecipePhoto from "@/components/RecipePhoto";
 import ImageUpload from "@/components/ImageUpload";
@@ -43,30 +42,36 @@ function RecipeDetailContent() {
   const router = useRouter();
   const recipeId = searchParams.get("id") ?? "";
 
+  const loadRecipeDetail = useAppStore((s) => s.loadRecipeDetail);
+  const [detailLoaded, setDetailLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!recipeId) return;
+    setDetailLoaded(false);
+    loadRecipeDetail(recipeId).finally(() => setDetailLoaded(true));
+  }, [recipeId, loadRecipeDetail]);
+
   const recipe = useAppStore((s) => s.recipes.find((r) => r.id === recipeId));
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
+  const profile = useAppStore((s) => s.profile);
+  const profiles = useAppStore((s) => s.profiles);
   const rating = useAppStore((s) => recipeRatingAvg(s, recipeId));
   const ratingCount = useAppStore((s) => recipeRatingCount(s, recipeId));
   const likes = useAppStore((s) => recipeLikeCount(s, recipeId));
   const comments = useAppStore((s) => commentsFor(s, recipeId));
-  const liked = useAppStore((s) => isLikedBy(s, currentUser?.id ?? null, recipeId));
+  const liked = useAppStore((s) => isLikedBy(s, profile?.id ?? null, recipeId));
   const bookmarked = useAppStore((s) =>
-    isBookmarkedBy(s, currentUser?.id ?? null, recipeId)
+    isBookmarkedBy(s, profile?.id ?? null, recipeId)
   );
-  const myRating = useAppStore((s) =>
-    ratingByUser(s, currentUser?.id ?? null, recipeId)
-  );
+  const myRating = useAppStore((s) => ratingByUser(s, profile?.id ?? null, recipeId));
   const cookPhotos = useAppStore((s) => cookPhotosFor(s, recipeId));
-  const recipeReports = useAppStore((s) =>
-    s.recipeReports.filter((r) => r.recipeId === recipeId)
-  );
-  const recipeReportPending = recipeReports.some((r) => r.status === "pending");
-  const commentReports = useAppStore((s) => s.commentReports);
+  const myReportedRecipeIds = useAppStore((s) => s.myReportedRecipeIds);
+  const myReportedCommentIds = useAppStore((s) => s.myReportedCommentIds);
   const forkedFrom = useAppStore((s) =>
-    recipe?.forkedFromId ? s.recipes.find((r) => r.id === recipe.forkedFromId) : null
+    recipe?.forkedFromId
+      ? s.recipes.find((r) => r.id === recipe.forkedFromId)
+      : undefined
   );
+  const ratingsState = useAppStore((s) => s.ratings);
 
   const toggleLike = useAppStore((s) => s.toggleLike);
   const toggleBookmark = useAppStore((s) => s.toggleBookmark);
@@ -76,13 +81,23 @@ function RecipeDetailContent() {
   const reportComment = useAppStore((s) => s.reportComment);
   const forkRecipe = useAppStore((s) => s.forkRecipe);
 
-  const [myStars, setMyStars] = useState(myRating?.stars ?? 0);
+  const [myStars, setMyStars] = useState(0);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [stagingPhoto, setStagingPhoto] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
-  const hasHydrated = useAppStore((s) => s.hasHydrated);
+  const [busy, setBusy] = useState(false);
 
-  if (!hasHydrated) return null;
+  useEffect(() => {
+    setMyStars(myRating?.stars ?? 0);
+  }, [myRating?.stars]);
+
+  if (!detailLoaded && !recipe) {
+    return (
+      <div className="mx-auto max-w-[600px] px-8 py-16 text-center text-muted">
+        Memuat resep...
+      </div>
+    );
+  }
 
   if (!recipe) {
     return (
@@ -95,14 +110,12 @@ function RecipeDetailContent() {
     );
   }
 
-  const isLoggedIn = !!currentUser;
-  const canInteract = !!currentUser && currentUser.emailVerified;
-  const isMine = currentUser?.id === recipe.userId;
+  const canInteract = !!profile;
+  const isMine = profile?.id === recipe.userId;
   const diff = DIFF_COLORS[recipe.difficulty];
-  const category = CATEGORIES.find((c) => c.value === recipe.category);
 
   function requireLogin(action: () => void) {
-    if (!isLoggedIn) {
+    if (!profile) {
       router.push("/masuk");
       return;
     }
@@ -110,8 +123,10 @@ function RecipeDetailContent() {
   }
 
   function handleFork() {
-    requireLogin(() => {
-      const newId = forkRecipe(recipe!.id);
+    requireLogin(async () => {
+      setBusy(true);
+      const newId = await forkRecipe(recipe!.id);
+      setBusy(false);
       if (newId) router.push(`/resep-saya/edit?id=${newId}`);
     });
   }
@@ -120,7 +135,7 @@ function RecipeDetailContent() {
     if (!canInteract) return;
     setMyStars(n);
     if (!showPhotoUpload) {
-      submitRating(recipe!.id, n, myRating?.photoDataUrl ?? null);
+      submitRating(recipe!.id, n, null);
     }
   }
 
@@ -147,7 +162,7 @@ function RecipeDetailContent() {
             <path d="M6 3v12a3 3 0 0 0 3 3h6" />
             <path d="M15 6l3 3-3 3" />
           </svg>
-          Dimodifikasi dari {forkedFrom.title} oleh {authorName(useAppStore.getState(), forkedFrom.userId)}
+          Dimodifikasi dari {forkedFrom.title} oleh {authorName({ profiles }, forkedFrom.userId)}
         </Link>
       )}
 
@@ -164,7 +179,7 @@ function RecipeDetailContent() {
                 style={{ borderColor: "var(--card-border)" }}
               >
                 <RecipePhoto
-                  src={cp.photoDataUrl}
+                  src={cp.photoUrl}
                   gradientIndex={i}
                   alt={`Foto oleh ${cp.author}`}
                 />
@@ -176,7 +191,7 @@ function RecipeDetailContent() {
 
       <div className="relative mb-5 aspect-[20/9] overflow-hidden rounded-xl4">
         <RecipePhoto
-          src={recipe.imageDataUrl}
+          src={recipe.imageUrl}
           gradientIndex={recipe.placeholderIndex}
           alt={recipe.title}
         />
@@ -199,7 +214,7 @@ function RecipeDetailContent() {
           <h1 className="font-display m-0 text-[34px] font-semibold tracking-tight text-white">
             {recipe.title}
           </h1>
-          <p className="m-0 text-sm text-white/80">oleh {authorName(useAppStore.getState(), recipe.userId)}</p>
+          <p className="m-0 text-sm text-white/80">oleh {authorName({ profiles }, recipe.userId)}</p>
         </div>
       </div>
 
@@ -228,7 +243,8 @@ function RecipeDetailContent() {
           <button
             type="button"
             onClick={handleFork}
-            className="flex items-center justify-center gap-2 rounded-2xl border-2 px-5 py-3.5 text-[15px] font-semibold"
+            disabled={busy}
+            className="flex items-center justify-center gap-2 rounded-2xl border-2 px-5 py-3.5 text-[15px] font-semibold disabled:opacity-50"
             style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 18, height: 18 }}>
@@ -240,7 +256,7 @@ function RecipeDetailContent() {
         )}
         <div className="px-1.5">
           <ReportControl
-            reported={recipeReportPending}
+            reported={myReportedRecipeIds.includes(recipe.id)}
             onSubmit={(reason) => requireLogin(() => reportRecipe(recipe.id, reason))}
           />
         </div>
@@ -257,7 +273,7 @@ function RecipeDetailContent() {
               ? myRating
                 ? "Kamu sudah memberi rating untuk resep ini"
                 : "Beri rating untuk resep ini"
-              : "Verifikasi email untuk memberi rating"}
+              : "Masuk untuk memberi rating"}
           </span>
           {canInteract && !showPhotoUpload && (
             <button
@@ -280,15 +296,17 @@ function RecipeDetailContent() {
               </div>
               <button
                 type="button"
-                disabled={myStars === 0}
-                onClick={() => {
-                  submitRating(recipe.id, myStars, stagingPhoto);
+                disabled={myStars === 0 || busy}
+                onClick={async () => {
+                  setBusy(true);
+                  await submitRating(recipe.id, myStars, stagingPhoto);
+                  setBusy(false);
                   setShowPhotoUpload(false);
                 }}
                 className="rounded-lg border-none px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
                 style={{ background: "#FF5A36" }}
               >
-                Kirim rating & foto
+                {busy ? "Mengirim..." : "Kirim rating & foto"}
               </button>
             </div>
           )}
@@ -297,7 +315,7 @@ function RecipeDetailContent() {
           <button
             type="button"
             disabled={!canInteract}
-            title="Verifikasi email untuk menyukai resep"
+            title={canInteract ? undefined : "Masuk untuk menyukai resep"}
             onClick={() => requireLogin(() => toggleLike(recipe.id))}
             className="flex items-center gap-2 rounded-xl2 border-2 px-4 py-2.5 text-sm font-semibold disabled:opacity-40"
             style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
@@ -363,7 +381,7 @@ function RecipeDetailContent() {
       {recipe.notes && (
         <div className="mb-8 rounded-2xl border-2 px-5.5 py-4.5" style={{ background: "#FFF3D1", borderColor: "#FFC93C" }}>
           <p className="m-0 mb-1 text-[13px] font-bold" style={{ color: "#A6740A" }}>
-            Tips dari {authorName(useAppStore.getState(), recipe.userId)}
+            Tips dari {authorName({ profiles }, recipe.userId)}
           </p>
           <p className="m-0 text-sm leading-relaxed text-ink">{recipe.notes}</p>
         </div>
@@ -374,8 +392,12 @@ function RecipeDetailContent() {
         <div className="mb-4.5 flex flex-col gap-3.5">
           {comments.length === 0 && <EmptyState text="Belum ada komentar. Jadilah yang pertama!" />}
           {comments.map((c) => {
-            const author = authorName(useAppStore.getState(), c.userId);
-            const verified = isVerifiedCommenter(useAppStore.getState(), c.userId, recipe.id);
+            const author = authorName({ profiles }, c.userId);
+            const verified = isVerifiedCommenter(
+              { recipes: [], ratings: ratingsState, likes: [], comments: [], profiles },
+              c.userId,
+              recipe.id
+            );
             return (
               <div key={c.id} className="flex gap-3">
                 <span
@@ -399,9 +421,7 @@ function RecipeDetailContent() {
                   </p>
                   <p className="m-0 mt-0.5 text-sm leading-snug text-ink">{c.text}</p>
                   <ReportControl
-                    reported={commentReports.some(
-                      (cr) => cr.commentId === c.id && cr.status === "pending"
-                    )}
+                    reported={myReportedCommentIds.includes(c.id)}
                     onSubmit={(reason) => requireLogin(() => reportComment(c.id, reason))}
                   />
                 </div>
@@ -420,9 +440,9 @@ function RecipeDetailContent() {
           <button
             type="button"
             disabled={!canInteract || !newComment.trim()}
-            title="Verifikasi email untuk berkomentar"
-            onClick={() => {
-              addComment(recipe.id, newComment);
+            title={canInteract ? undefined : "Masuk untuk berkomentar"}
+            onClick={async () => {
+              await addComment(recipe.id, newComment);
               setNewComment("");
             }}
             className="rounded-xl2 border-none px-5.5 text-sm font-semibold text-white disabled:opacity-40"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import RecipeCard from "@/components/RecipeCard";
@@ -7,29 +8,24 @@ import EmptyState from "@/components/EmptyState";
 
 export default function MyRecipesPage() {
   const router = useRouter();
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
-  const hasHydrated = useAppStore((s) => s.hasHydrated);
-  const recipes = useAppStore((s) =>
-    s.recipes.filter((r) => r.userId === s.currentUserId)
-  );
+  const profile = useAppStore((s) => s.profile);
+  const authLoading = useAppStore((s) => s.authLoading);
+  const loadMine = useAppStore((s) => s.loadMine);
   const deleteRecipe = useAppStore((s) => s.deleteRecipe);
+  const recipes = useAppStore((s) =>
+    s.recipes.filter((r) => r.userId === s.profile?.id)
+  );
+  const [loaded, setLoaded] = useState(false);
 
-  const canShare = !!currentUser && currentUser.emailVerified;
-
-  function handleAdd() {
-    if (!currentUser) {
-      router.push("/masuk");
-      return;
+  useEffect(() => {
+    if (profile) {
+      loadMine().finally(() => setLoaded(true));
     }
-    if (!canShare) return;
-    router.push("/resep-saya/baru");
-  }
+  }, [profile, loadMine]);
 
-  if (!hasHydrated) return null;
+  if (authLoading) return null;
 
-  if (!currentUser) {
+  if (!profile) {
     return (
       <div className="mx-auto max-w-[600px] px-8 py-16 text-center">
         <p className="mb-3 text-[15px] text-muted">Masuk dulu untuk melihat resepmu.</p>
@@ -54,10 +50,8 @@ export default function MyRecipesPage() {
         </div>
         <button
           type="button"
-          onClick={handleAdd}
-          disabled={!canShare}
-          title={canShare ? undefined : "Verifikasi email untuk membagikan resep"}
-          className="flex items-center gap-2 rounded-2xl border-none px-5.5 py-3 text-sm font-semibold text-white disabled:opacity-40"
+          onClick={() => router.push("/resep-saya/baru")}
+          className="flex items-center gap-2 rounded-2xl border-none px-5.5 py-3 text-sm font-semibold text-white"
           style={{ background: "#FF5A36" }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 16, height: 16 }}>
@@ -68,7 +62,9 @@ export default function MyRecipesPage() {
         </button>
       </div>
 
-      {recipes.length === 0 ? (
+      {!loaded ? (
+        <EmptyState text="Memuat resepmu..." />
+      ) : recipes.length === 0 ? (
         <EmptyState text="Kamu belum punya resep. Yuk buat yang pertama!" />
       ) : (
         <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))" }}>

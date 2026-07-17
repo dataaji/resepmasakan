@@ -7,28 +7,23 @@ import RecipeForm from "@/components/RecipeForm";
 
 export default function NewRecipePage() {
   const router = useRouter();
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
-  const hasHydrated = useAppStore((s) => s.hasHydrated);
+  const profile = useAppStore((s) => s.profile);
+  const authLoading = useAppStore((s) => s.authLoading);
   const addRecipe = useAppStore((s) => s.addRecipe);
 
   useEffect(() => {
-    if (!hasHydrated) return;
-    if (!currentUser) {
+    if (!authLoading && !profile) {
       router.replace("/masuk");
-    } else if (!currentUser.emailVerified) {
-      router.replace("/resep-saya");
     }
-  }, [hasHydrated, currentUser, router]);
+  }, [authLoading, profile, router]);
 
-  if (!hasHydrated || !currentUser || !currentUser.emailVerified) return null;
+  if (authLoading || !profile) return null;
 
   return (
     <RecipeForm
       headerLabel="Tambah Resep Baru"
-      onSubmit={(input) => {
-        const id = addRecipe(input);
+      onSubmit={async (input) => {
+        const id = await addRecipe(input);
         router.push(id ? `/resep?id=${id}` : "/resep-saya");
       }}
     />

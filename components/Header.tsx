@@ -16,12 +16,10 @@ const NAV_ITEMS = [
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
+  const profile = useAppStore((s) => s.profile);
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
-  const logout = useAppStore((s) => s.logout);
+  const signOut = useAppStore((s) => s.signOut);
 
   const isDark = theme === "dark";
 
@@ -99,7 +97,7 @@ export default function Header() {
           FAQ
         </Link>
 
-        {currentUser?.role === "admin" && (
+        {profile?.role === "admin" && (
           <Link
             href="/admin"
             title="Panel Admin"
@@ -110,11 +108,11 @@ export default function Header() {
           </Link>
         )}
 
-        {currentUser && (
+        {profile && (
           <button
             type="button"
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await signOut();
               router.push("/");
             }}
             className="flex-none rounded-xl2 border px-4 py-2 text-[13px] font-semibold"
@@ -150,16 +148,27 @@ export default function Header() {
           )}
         </button>
 
-        {currentUser ? (
-          <div
-            className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full text-[13px] font-bold text-white"
-            style={{
-              background: "linear-gradient(135deg,#FF5A36,#FFC93C)",
-              boxShadow: "0 3px 8px rgba(255,90,54,.3)",
-            }}
-          >
-            {initials(currentUser.name)}
-          </div>
+        {profile ? (
+          profile.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.avatarUrl}
+              alt={profile.name}
+              referrerPolicy="no-referrer"
+              className="h-[38px] w-[38px] flex-none rounded-full object-cover"
+              style={{ boxShadow: "0 3px 8px rgba(255,90,54,.3)" }}
+            />
+          ) : (
+            <div
+              className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full text-[13px] font-bold text-white"
+              style={{
+                background: "linear-gradient(135deg,#FF5A36,#FFC93C)",
+                boxShadow: "0 3px 8px rgba(255,90,54,.3)",
+              }}
+            >
+              {initials(profile.name)}
+            </div>
+          )
         ) : (
           <Link
             href="/masuk"

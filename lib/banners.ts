@@ -14,7 +14,7 @@ export const BANNERS: Banner[] = [
     subtitle: "Resep autentik dengan rating tertinggi di Kulinara",
     ctaLabel: "Lihat Resep",
     gradient: "linear-gradient(120deg,#D94A24,#FF5A36)",
-    href: "/resep?id=r-rendang",
+    href: "/resep?id=aaaaaaaa-0000-4000-8000-000000000002",
   },
   {
     label: "Buat Cepat",
@@ -30,6 +30,6 @@ export const BANNERS: Banner[] = [
     subtitle: "Cocok dinikmati di cuaca yang panas",
     ctaLabel: "Lihat Resep",
     gradient: "linear-gradient(120deg,#7F77DD,#D94A8C)",
-    href: "/resep?id=r-cendol",
+    href: "/resep?id=aaaaaaaa-0000-4000-8000-000000000008",
   },
 ];

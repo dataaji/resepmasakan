@@ -4,16 +4,12 @@ export type UserRole = "user" | "admin";
 export type UserStatus = "active" | "suspended" | "banned";
 export type ReportStatus = "pending" | "resolved";
 
-export interface User {
+export interface Profile {
   id: string;
   name: string;
-  email: string;
-  password: string;
+  avatarUrl: string | null;
   role: UserRole;
   status: UserStatus;
-  emailVerified: boolean;
-  verifyCode: string | null;
-  createdAt: number;
 }
 
 export interface Ingredient {
@@ -35,7 +31,7 @@ export interface Recipe {
   userId: string;
   title: string;
   category: Category;
-  imageDataUrl: string | null;
+  imageUrl: string | null;
   placeholderIndex: number;
   cookTimeMinutes: number;
   servings: number;
@@ -47,6 +43,20 @@ export interface Recipe {
   isPublic: boolean;
   forkedFromId: string | null;
   createdAt: number;
+}
+
+export interface RecipeInput {
+  title: string;
+  category: Category;
+  imageDataUrl: string | null;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: Difficulty;
+  estimatedCost: number | null;
+  notes: string;
+  ingredients: Omit<Ingredient, "id">[];
+  steps: { text: string }[];
+  isPublic: boolean;
 }
 
 export interface Like {
@@ -66,7 +76,7 @@ export interface Rating {
   userId: string;
   recipeId: string;
   stars: number;
-  photoDataUrl: string | null;
+  photoUrl: string | null;
   createdAt: number;
 }
 
@@ -76,8 +86,6 @@ export interface Comment {
   userId: string;
   text: string;
   createdAt: number;
-  reported: boolean;
-  reportReason: string;
 }
 
 export interface RecipeReport {

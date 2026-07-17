@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
+import { Fredoka, Poppins } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import StoreInit from "@/components/StoreInit";
+
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-fredoka",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
+});
 
 export const metadata: Metadata = {
   title: "Kulinara",
@@ -25,14 +38,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id">
+    <html lang="id" className={`${fredoka.variable} ${poppins.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="font-sans">

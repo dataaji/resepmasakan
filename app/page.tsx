@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { filterAndSortHome, HomeFilters } from "@/lib/selectors";
 import { CATEGORIES } from "@/lib/constants";
@@ -26,9 +25,8 @@ export default function HomePage() {
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const currentUser = useAppStore((s) =>
-    s.users.find((u) => u.id === s.currentUserId)
-  );
+  const loadPublic = useAppStore((s) => s.loadPublic);
+  const publicLoaded = useAppStore((s) => s.publicLoaded);
 
   const [filters, setFilters] = useState<HomeFilters>({
     search: "",
@@ -39,6 +37,10 @@ function HomeContent() {
     sort: "rating",
   });
 
+  useEffect(() => {
+    loadPublic();
+  }, [loadPublic]);
+
   const list = useAppStore((s) => filterAndSortHome(s, filters));
 
   const resultsLabel = useMemo(
@@ -46,33 +48,8 @@ function HomeContent() {
     [list.length]
   );
 
-  const showUnverifiedBanner = !!currentUser && !currentUser.emailVerified;
-
   return (
     <div className="mx-auto max-w-[1400px] px-8 pb-16 pt-7">
-      {showUnverifiedBanner && (
-        <div
-          className="mb-5 flex flex-wrap items-center gap-3.5 rounded-2xl border px-5 py-3.5"
-          style={{ background: "#FFF3D1", borderColor: "#F0D98A" }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="#A6740A" strokeWidth={2} style={{ width: 20, height: 20 }}>
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <p className="m-0 min-w-[200px] flex-1 text-sm" style={{ color: "#7A5A0A" }}>
-            Verifikasi email kamu untuk bisa membagikan resep dan memberi rating
-          </p>
-          <Link
-            href="/verifikasi"
-            className="rounded-lg border-none px-4 py-2 text-[13px] font-semibold text-white"
-            style={{ background: "#A6740A" }}
-          >
-            Verifikasi Sekarang
-          </Link>
-        </div>
-      )}
-
       <div className="mb-7 pt-1.5">
         <h1 className="font-display m-0 mb-1.5 text-[38px] font-semibold tracking-tight text-ink">
           Jelajah Resep
@@ -159,9 +136,11 @@ function HomeContent() {
 
       <BannerCarousel />
 
-      <p className="mb-4 text-[13px] text-muted">{resultsLabel}</p>
+      <p className="mb-4 text-[13px] text-muted">
+        {publicLoaded ? resultsLabel : "Memuat resep..."}
+      </p>
 
-      {list.length === 0 ? (
+      {publicLoaded && list.length === 0 ? (
         <EmptyState text="Tidak ada resep yang cocok dengan filter kamu." />
       ) : (
         <div className="grid gap-5.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>
