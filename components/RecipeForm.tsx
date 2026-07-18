@@ -148,7 +148,7 @@ export default function RecipeForm({
       e.category = "Isi nama kategori";
     if (!cookTime.trim() || parseInt(cookTime, 10) <= 0)
       e.cookTime = "Waktu masak wajib diisi";
-    if (!servings.trim() || parseInt(servings, 10) <= 0) e.servings = "Porsi wajib diisi";
+    if (!servings.trim() || parseInt(servings, 10) <= 0) e.servings = "Jumlah orang wajib diisi";
     if (!ingredients.some((r) => r.name.trim()))
       e.ingredients = "Isi minimal satu bahan";
     if (!steps.some((r) => r.text.trim())) e.steps = "Isi minimal satu langkah";
@@ -299,12 +299,13 @@ export default function RecipeForm({
             style={{ ...(errors.cookTime ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
           />
         </Field>
-        <Field label="Porsi" error={errors.servings} compact>
+        <Field label="Untuk berapa orang" error={errors.servings} compact>
           <input
             type="number"
             min={1}
             value={servings}
             onChange={(e) => setServings(e.target.value)}
+            placeholder="mis. 4"
             className="w-full rounded-xl2 border-2 px-3.5 py-2.5 text-[15px]"
             style={{ ...(errors.servings ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
           />

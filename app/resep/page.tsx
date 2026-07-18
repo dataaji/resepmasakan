@@ -257,7 +257,7 @@ function RecipeDetailContent() {
 
       <div className={`mb-5 grid grid-cols-2 gap-3 sm:gap-3.5 ${recipe.estimatedCost !== null ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <StatCard icon="clock" bg="#FFE1D6" fg="#D94A24" label="Waktu Masak" value={formatCookTime(recipe.cookTimeMinutes)} />
-        <StatCard icon="users" bg="#DDF3F6" fg="#1D7A8C" label="Porsi" value={`${recipe.servings} orang`} />
+        <StatCard icon="users" bg="#DDF3F6" fg="#1D7A8C" label="Untuk" value={`${recipe.servings} orang`} />
         <StatCard icon="star" bg="#FFF3D1" fg="#A6740A" label="Rating" value={`${rating.toFixed(1)} / 5 (${ratingCount})`} />
         {recipe.estimatedCost !== null && (
           <StatCard icon="cost" bg="#E1F5E4" fg="#1F8A3B" label="Estimasi Biaya" value={`~${formatRupiah(recipe.estimatedCost)}`} />
@@ -389,7 +389,7 @@ function RecipeDetailContent() {
                 <button
                   type="button"
                   onClick={() => setPortions((p) => Math.max(1, p - 1))}
-                  aria-label="Kurangi porsi"
+                  aria-label="Kurangi jumlah orang"
                   className="flex h-7 w-7 items-center justify-center rounded-full border-none text-[16px] font-bold text-white disabled:opacity-40"
                   style={{ background: "#FF5A36" }}
                   disabled={portions <= 1}
@@ -397,12 +397,12 @@ function RecipeDetailContent() {
                   −
                 </button>
                 <span className="min-w-[62px] text-center text-[13px] font-bold text-ink">
-                  {portions} porsi
+                  {portions} orang
                 </span>
                 <button
                   type="button"
                   onClick={() => setPortions((p) => Math.min(99, p + 1))}
-                  aria-label="Tambah porsi"
+                  aria-label="Tambah jumlah orang"
                   className="flex h-7 w-7 items-center justify-center rounded-full border-none text-[16px] font-bold text-white disabled:opacity-40"
                   style={{ background: "#FF5A36" }}
                   disabled={portions >= 99}
@@ -414,7 +414,7 @@ function RecipeDetailContent() {
           </div>
           {isScaled && (
             <p className="m-0 mb-2.5 text-xs text-muted2">
-              Takaran disesuaikan dari resep asli {baseServings} porsi.{" "}
+              Takaran disesuaikan untuk {portions} orang (resep asli {baseServings} orang).{" "}
               <button
                 type="button"
                 onClick={() => setPortions(baseServings)}
