@@ -1,4 +1,4 @@
-export type Category = "Makanan" | "Camilan" | "Minuman" | "Kue & Dessert";
+export type Category = string;
 export type Difficulty = "Mudah" | "Sedang" | "Sulit";
 export type UserRole = "user" | "admin" | "super_admin";
 export type UserStatus = "active" | "suspended" | "banned";
@@ -24,6 +24,7 @@ export interface Step {
   id: string;
   n: number;
   text: string;
+  photos: string[];
 }
 
 export interface Recipe {
@@ -56,7 +57,7 @@ export interface RecipeInput {
   estimatedCost: number | null;
   notes: string;
   ingredients: Omit<Ingredient, "id">[];
-  steps: { text: string }[];
+  steps: { text: string; photos: string[] }[];
   isPublic: boolean;
 }
 
@@ -86,6 +87,7 @@ export interface Comment {
   recipeId: string;
   userId: string;
   text: string;
+  imageUrl: string | null;
   createdAt: number;
 }
 

@@ -3,46 +3,52 @@
 @tailwind utilities;
 
 :root {
-  --ink: #2b2118;
-  --muted: #7a6a5c;
-  --muted2: #a69884;
+  --ink: #2a1d14;
+  --muted: #7c6553;
+  --muted2: #ab967f;
   --card: #ffffff;
-  --card-border: #f0e4d8;
-  --input-border: #e8dcc8;
-  --nav-wrap: #f5ede2;
-  --track: #e8dfd0;
-  --header-bg: rgba(255, 248, 240, 0.82);
-  --header-border-color: rgba(43, 33, 24, 0.06);
-  --page-bg: #fff8f0;
+  --card-border: #f1e3d3;
+  --input-border: #ead9c4;
+  --nav-wrap: #f8ede0;
+  --track: #ecddcb;
+  --header-bg: rgba(255, 246, 238, 0.85);
+  --header-border-color: rgba(42, 29, 20, 0.07);
+  --page-bg: #fff6ee;
+  --blob-a: #ffdcc2;
+  --blob-b: #ffe0b8;
 }
 
 :root[data-theme="dark"] {
-  --ink: #f5ede2;
-  --muted: #b5a594;
-  --muted2: #8a7a68;
-  --card: #2a2119;
-  --card-border: #3a2e22;
-  --input-border: #3a2e22;
-  --nav-wrap: #241c15;
-  --track: #3a2e22;
-  --header-bg: rgba(28, 23, 18, 0.82);
-  --header-border-color: rgba(255, 255, 255, 0.06);
-  --page-bg: #1c1712;
+  --ink: #f6ede1;
+  --muted: #bfa78f;
+  --muted2: #8f7c66;
+  --card: #241a15;
+  --card-border: #3b2c21;
+  --input-border: #3b2c21;
+  --nav-wrap: #2e221b;
+  --track: #3b2c21;
+  --header-bg: rgba(26, 19, 16, 0.85);
+  --header-border-color: rgba(255, 240, 225, 0.07);
+  --page-bg: #1a1310;
+  --blob-a: #7a3a1e;
+  --blob-b: #6b3a12;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ink: #f5ede2;
-    --muted: #b5a594;
-    --muted2: #8a7a68;
-    --card: #2a2119;
-    --card-border: #3a2e22;
-    --input-border: #3a2e22;
-    --nav-wrap: #241c15;
-    --track: #3a2e22;
-    --header-bg: rgba(28, 23, 18, 0.82);
-    --header-border-color: rgba(255, 255, 255, 0.06);
-    --page-bg: #1c1712;
+    --ink: #f6ede1;
+    --muted: #bfa78f;
+    --muted2: #8f7c66;
+    --card: #241a15;
+    --card-border: #3b2c21;
+    --input-border: #3b2c21;
+    --nav-wrap: #2e221b;
+    --track: #3b2c21;
+    --header-bg: rgba(26, 19, 16, 0.85);
+    --header-border-color: rgba(255, 240, 225, 0.07);
+    --page-bg: #1a1310;
+    --blob-a: #7a3a1e;
+    --blob-b: #6b3a12;
   }
 }
 
@@ -55,8 +61,8 @@ body {
   color: var(--ink);
   background: var(--page-bg);
   background-image:
-    radial-gradient(circle at 8% -5%, #ffe7d855 0%, transparent 45%),
-    radial-gradient(circle at 96% 10%, #fde3ee55 0%, transparent 40%);
+    radial-gradient(circle at 8% -5%, color-mix(in srgb, var(--blob-a) 45%, transparent) 0%, transparent 45%),
+    radial-gradient(circle at 96% 10%, color-mix(in srgb, var(--blob-b) 40%, transparent) 0%, transparent 40%);
   background-attachment: fixed;
 }
 

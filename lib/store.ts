@@ -89,6 +89,7 @@ interface AppState {
   loadAdmin: () => Promise<void>;
 
   uploadPhotoFromDataUrl: (dataUrl: string) => Promise<string | null>;
+  uploadMany: (dataUrls: string[]) => Promise<string[]>;
 
   addRecipe: (input: RecipeInput) => Promise<string | null>;
   updateRecipe: (id: string, input: RecipeInput) => Promise<void>;
@@ -99,7 +100,7 @@ interface AppState {
   toggleLike: (recipeId: string) => Promise<void>;
   toggleBookmark: (recipeId: string) => Promise<void>;
   submitRating: (recipeId: string, stars: number, photoDataUrl: string | null) => Promise<void>;
-  addComment: (recipeId: string, text: string) => Promise<void>;
+  addComment: (recipeId: string, text: string, imageDataUrl?: string | null) => Promise<void>;
   reportRecipe: (recipeId: string, reason: string) => Promise<void>;
   reportComment: (commentId: string, reason: string) => Promise<void>;
 
@@ -501,17 +502,26 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
+  uploadMany: async (dataUrls) => {
+    const out: string[] = [];
+    for (const src of dataUrls) {
+      const url = src.startsWith("data:") ? await get().uploadPhotoFromDataUrl(src) : src;
+      if (url) out.push(url);
+    }
+    return out;
+  },
+
   addRecipe: async (input) => {
     const me = get().profile;
     if (!me) return null;
-    const imageUrls: string[] = [];
-    for (const src of input.imageDataUrls) {
-      const url = src.startsWith("data:") ? await get().uploadPhotoFromDataUrl(src) : src;
-      if (url) imageUrls.push(url);
+    const imageUrls = await get().uploadMany(input.imageDataUrls);
+    const steps = [];
+    for (const s of input.steps) {
+      steps.push({ text: s.text, photos: await get().uploadMany(s.photos) });
     }
     const { data, error } = await supabase
       .from("recipes")
-      .insert(recipeInputToRow(input, imageUrls, me.id))
+      .insert(recipeInputToRow({ ...input, steps }, imageUrls, me.id))
       .select("*")
       .single();
     if (error || !data) return null;
@@ -522,12 +532,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
   updateRecipe: async (id, input) => {
     const me = get().profile;
     if (!me) return;
-    const imageUrls: string[] = [];
-    for (const src of input.imageDataUrls) {
-      const url = src.startsWith("data:") ? await get().uploadPhotoFromDataUrl(src) : src;
-      if (url) imageUrls.push(url);
+    const imageUrls = await get().uploadMany(input.imageDataUrls);
+    const steps = [];
+    for (const s of input.steps) {
+      steps.push({ text: s.text, photos: await get().uploadMany(s.photos) });
     }
-    const row = recipeInputToRow(input, imageUrls, me.id);
+    const row = recipeInputToRow({ ...input, steps }, imageUrls, me.id);
     const { data } = await supabase.from("recipes").update(row).eq("id", id).select("*").single();
     if (data) set((s) => ({ recipes: upsertById(s.recipes, [rowToRecipe(data)]) }));
   },
@@ -576,7 +586,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
           unit: i.unit,
           secukupnya: i.secukupnya,
         })),
-        steps: source.steps.map((st) => st.text),
+        steps: source.steps.map((st) => ({ text: st.text, photos: st.photos })),
         is_public: false,
         forked_from_id: source.id,
       })
@@ -664,12 +674,18 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
-  addComment: async (recipeId, text) => {
+  addComment: async (recipeId, text, imageDataUrl) => {
     const me = get().profile;
-    if (!me || !text.trim()) return;
+    if (!me || (!text.trim() && !imageDataUrl)) return;
+    let imageUrl: string | null = null;
+    if (imageDataUrl) {
+      imageUrl = imageDataUrl.startsWith("data:")
+        ? await get().uploadPhotoFromDataUrl(imageDataUrl)
+        : imageDataUrl;
+    }
     const { data } = await supabase
       .from("comments")
-      .insert({ recipe_id: recipeId, user_id: me.id, text: text.trim() })
+      .insert({ recipe_id: recipeId, user_id: me.id, text: text.trim(), image_url: imageUrl })
       .select("*")
       .single();
     if (data) {

@@ -41,11 +41,17 @@ export function rowToRecipe(row: any): Recipe {
     unit: i.unit ?? null,
     secukupnya: !!i.secukupnya,
   }));
-  const steps: Step[] = (row.steps ?? []).map((text: any, idx: number) => ({
-    id: uid(),
-    n: idx + 1,
-    text: String(text),
-  }));
+  const steps: Step[] = (row.steps ?? []).map((s: any, idx: number) => {
+    if (typeof s === "string") {
+      return { id: uid(), n: idx + 1, text: s, photos: [] };
+    }
+    return {
+      id: uid(),
+      n: idx + 1,
+      text: String(s?.text ?? ""),
+      photos: Array.isArray(s?.photos) ? s.photos.filter((p: any) => typeof p === "string") : [],
+    };
+  });
   const images: string[] = Array.isArray(row.images)
     ? row.images.filter((x: any) => typeof x === "string")
     : [];
@@ -103,6 +109,7 @@ export function rowToComment(row: any): Comment {
     recipeId: row.recipe_id,
     userId: row.user_id,
     text: row.text,
+    imageUrl: row.image_url ?? null,
     createdAt: new Date(row.created_at).getTime(),
   };
 }
@@ -151,7 +158,7 @@ export function recipeInputToRow(
     estimatedCost: number | null;
     notes: string;
     ingredients: Omit<Ingredient, "id">[];
-    steps: { text: string }[];
+    steps: { text: string; photos: string[] }[];
     isPublic: boolean;
   },
   imageUrls: string[],
@@ -174,7 +181,7 @@ export function recipeInputToRow(
       unit: i.unit,
       secukupnya: i.secukupnya,
     })),
-    steps: input.steps.map((s) => s.text),
+    steps: input.steps.map((s) => ({ text: s.text, photos: s.photos })),
     is_public: input.isPublic,
   };
 }

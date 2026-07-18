@@ -5,6 +5,22 @@ export const CATEGORIES: { value: Category; dot: string }[] = [
   { value: "Camilan", dot: "#FFC93C" },
   { value: "Minuman", dot: "#1D7A8C" },
   { value: "Kue & Dessert", dot: "#D94A8C" },
+  { value: "Sarapan", dot: "#EF9F27" },
+  { value: "Makanan Sehat", dot: "#639922" },
+  { value: "Pedas", dot: "#E24B4A" },
+  { value: "Vegetarian", dot: "#1D9E75" },
+  { value: "Seafood", dot: "#378ADD" },
+];
+
+export const POPULAR_SEARCHES = [
+  "Ayam",
+  "Rendang",
+  "Pedas",
+  "Nasi goreng",
+  "Dessert",
+  "Sup",
+  "Sate",
+  "Es segar",
 ];
 
 export const DIFFICULTIES: Difficulty[] = ["Mudah", "Sedang", "Sulit"];

@@ -16,8 +16,9 @@ import {
   authorName,
   cookPhotosFor,
 } from "@/lib/selectors";
-import { formatCookTime, formatRupiah, initials, timeAgo } from "@/lib/utils";
+import { formatCookTime, formatRupiah, initials, timeAgo, fileToCompressedDataUrl } from "@/lib/utils";
 import RecipePhoto from "@/components/RecipePhoto";
+import RecipeCard from "@/components/RecipeCard";
 import ImageUpload from "@/components/ImageUpload";
 import { StarInput } from "@/components/StarRating";
 import ReportControl from "@/components/ReportControl";
@@ -85,8 +86,15 @@ function RecipeDetailContent() {
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [stagingPhoto, setStagingPhoto] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
+  const [commentPhoto, setCommentPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const allRecipes = useAppStore((s) => s.recipes);
+  const loadPublic = useAppStore((s) => s.loadPublic);
+
+  useEffect(() => {
+    loadPublic();
+  }, [loadPublic]);
 
   useEffect(() => {
     setMyStars(myRating?.stars ?? 0);
@@ -390,7 +398,19 @@ function RecipeDetailContent() {
                 >
                   {step.n}
                 </span>
-                <p className="m-0 mt-0.5 text-sm leading-relaxed">{step.text}</p>
+                <div className="flex-1">
+                  <p className="m-0 mt-0.5 text-sm leading-relaxed">{step.text}</p>
+                  {step.photos.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {step.photos.map((src, pi) => (
+                        <div key={pi} className="h-[90px] w-[120px] overflow-hidden rounded-xl2 border" style={{ borderColor: "var(--card-border)" }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt={`Foto langkah ${step.n}`} className="h-full w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -438,7 +458,13 @@ function RecipeDetailContent() {
                       </span>
                     )}
                   </p>
-                  <p className="m-0 mt-0.5 text-sm leading-snug text-ink">{c.text}</p>
+                  {c.text && <p className="m-0 mt-0.5 text-sm leading-snug text-ink">{c.text}</p>}
+                  {c.imageUrl && (
+                    <div className="mt-2 h-[160px] w-[220px] max-w-full overflow-hidden rounded-xl2 border" style={{ borderColor: "var(--card-border)" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={c.imageUrl} alt="Foto komentar" className="h-full w-full object-cover" />
+                    </div>
+                  )}
                   <ReportControl
                     reported={myReportedCommentIds.includes(c.id)}
                     onSubmit={(reason) => requireLogin(() => reportComment(c.id, reason))}
@@ -448,7 +474,50 @@ function RecipeDetailContent() {
             );
           })}
         </div>
+        {commentPhoto && (
+          <div className="mb-2.5 flex items-center gap-2.5">
+            <div className="relative h-[70px] w-[94px] overflow-hidden rounded-xl2 border" style={{ borderColor: "var(--card-border)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={commentPhoto} alt="Foto hasil masakan" className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setCommentPhoto(null)}
+                aria-label="Hapus foto"
+                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-none text-white"
+                style={{ background: "rgba(0,0,0,.55)" }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 10, height: 10 }}>
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <span className="text-xs text-muted2">Foto hasil masakanmu akan ikut terkirim</span>
+          </div>
+        )}
         <div className="flex gap-2.5">
+          {canInteract && (
+            <label
+              className="flex h-[44px] w-[44px] flex-none cursor-pointer items-center justify-center rounded-xl2 border-2"
+              style={{ borderColor: "var(--input-border)", background: "var(--card)" }}
+              title="Lampirkan foto"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth={2} style={{ width: 18, height: 18 }}>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setCommentPhoto(await fileToCompressedDataUrl(f));
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          )}
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
@@ -458,11 +527,14 @@ function RecipeDetailContent() {
           />
           <button
             type="button"
-            disabled={!canInteract || !newComment.trim()}
+            disabled={!canInteract || (!newComment.trim() && !commentPhoto) || busy}
             title={canInteract ? undefined : "Masuk untuk berkomentar"}
             onClick={async () => {
-              await addComment(recipe.id, newComment);
+              setBusy(true);
+              await addComment(recipe.id, newComment, commentPhoto);
+              setBusy(false);
               setNewComment("");
+              setCommentPhoto(null);
             }}
             className="rounded-xl2 border-none px-5.5 text-sm font-semibold text-white disabled:opacity-40"
             style={{ background: "#FF5A36" }}
@@ -471,6 +543,25 @@ function RecipeDetailContent() {
           </button>
         </div>
       </div>
+
+      {(() => {
+        const similar = allRecipes
+          .filter(
+            (r) => r.id !== recipe.id && r.isPublic && r.category === recipe.category
+          )
+          .slice(0, 4);
+        if (similar.length === 0) return null;
+        return (
+          <div className="mt-10">
+            <h2 className="font-display m-0 mb-4 text-[19px] text-ink">Resep Serupa</h2>
+            <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))" }}>
+              {similar.map((r) => (
+                <RecipeCard key={r.id} recipe={r} variant="public" />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

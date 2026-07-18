@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fredoka, Poppins } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import StoreInit from "@/components/StoreInit";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ToastStack from "@/components/ui/Toast";
@@ -48,6 +49,7 @@ export default function RootLayout({
         <StoreInit />
         <Header />
         {children}
+        <Footer />
         <ConfirmDialog />
         <ToastStack />
       </body>

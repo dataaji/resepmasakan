@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { filterAndSortHome, HomeFilters } from "@/lib/selectors";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, POPULAR_SEARCHES } from "@/lib/constants";
 import ChipGroup from "@/components/ChipGroup";
 import BannerCarousel from "@/components/BannerCarousel";
 import RecipeCard from "@/components/RecipeCard";
@@ -135,6 +135,25 @@ function HomeContent() {
       </div>
 
       <BannerCarousel />
+
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[13px] font-semibold text-muted">Pencarian populer:</span>
+        {POPULAR_SEARCHES.map((term) => (
+          <button
+            key={term}
+            type="button"
+            onClick={() => setFilters((f) => ({ ...f, search: term, category: "Semua" }))}
+            className="rounded-full border px-3 py-1.5 text-xs font-semibold"
+            style={{
+              borderColor: "var(--card-border)",
+              background: "var(--card)",
+              color: "var(--ink)",
+            }}
+          >
+            {term}
+          </button>
+        ))}
+      </div>
 
       <p className="mb-4 text-[13px] text-muted">
         {publicLoaded ? resultsLabel : "Memuat resep..."}

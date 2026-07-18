@@ -8,7 +8,9 @@ import ChipGroup from "@/components/ChipGroup";
 import { fileToCompressedDataUrl } from "@/lib/utils";
 
 const CUSTOM_UNIT = "__custom__";
+const CUSTOM_CATEGORY = "__custom_cat__";
 const KNOWN_UNITS = UNIT_GROUPS.flatMap((g) => g.units);
+const KNOWN_CATEGORIES = CATEGORIES.map((c) => c.value);
 
 interface IngredientRow {
   key: string;
@@ -22,10 +24,12 @@ interface IngredientRow {
 interface StepRow {
   key: string;
   text: string;
+  photos: string[];
 }
 
 interface FormErrors {
   title?: string;
+  category?: string;
   cookTime?: string;
   servings?: string;
   ingredients?: string;
@@ -55,9 +59,9 @@ function toIngredientRows(recipe?: Recipe): IngredientRow[] {
 
 function toStepRows(recipe?: Recipe): StepRow[] {
   if (!recipe || recipe.steps.length === 0) {
-    return [{ key: rowKey(), text: "" }];
+    return [{ key: rowKey(), text: "", photos: [] }];
   }
-  return recipe.steps.map((s) => ({ key: rowKey(), text: s.text }));
+  return recipe.steps.map((s) => ({ key: rowKey(), text: s.text, photos: s.photos ?? [] }));
 }
 
 function toPhotos(recipe?: Recipe): string[] {
@@ -77,9 +81,15 @@ export default function RecipeForm({
 }) {
   const router = useRouter();
 
+  const initialIsCustomCat = !!initial && !KNOWN_CATEGORIES.includes(initial.category);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [photos, setPhotos] = useState<string[]>(toPhotos(initial));
-  const [category, setCategory] = useState<Category>(initial?.category ?? "Makanan");
+  const [categoryChoice, setCategoryChoice] = useState<string>(
+    initialIsCustomCat ? CUSTOM_CATEGORY : initial?.category ?? "Makanan"
+  );
+  const [customCategory, setCustomCategory] = useState<string>(
+    initialIsCustomCat ? initial!.category : ""
+  );
   const [cookTime, setCookTime] = useState(initial ? String(initial.cookTimeMinutes) : "");
   const [servings, setServings] = useState(initial ? String(initial.servings) : "");
   const [difficulty, setDifficulty] = useState<Difficulty>(initial?.difficulty ?? "Mudah");
@@ -120,9 +130,22 @@ export default function RecipeForm({
     }
   }
 
+  async function handleAddStepPhotos(key: string, files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const urls: string[] = [];
+    for (const file of Array.from(files)) {
+      urls.push(await fileToCompressedDataUrl(file));
+    }
+    setSteps((rows) =>
+      rows.map((r) => (r.key === key ? { ...r, photos: [...r.photos, ...urls] } : r))
+    );
+  }
+
   function validate(): FormErrors {
     const e: FormErrors = {};
     if (!title.trim()) e.title = "Judul resep wajib diisi";
+    if (categoryChoice === CUSTOM_CATEGORY && !customCategory.trim())
+      e.category = "Isi nama kategori";
     if (!cookTime.trim() || parseInt(cookTime, 10) <= 0)
       e.cookTime = "Waktu masak wajib diisi";
     if (!servings.trim() || parseInt(servings, 10) <= 0) e.servings = "Porsi wajib diisi";
@@ -139,9 +162,11 @@ export default function RecipeForm({
       formTopRef.current?.scrollIntoView({ behavior: "smooth" });
       return;
     }
+    const finalCategory =
+      categoryChoice === CUSTOM_CATEGORY ? customCategory.trim() : categoryChoice;
     const input: RecipeInput = {
       title: title.trim(),
-      category,
+      category: finalCategory,
       imageDataUrls: photos,
       cookTimeMinutes: parseInt(cookTime, 10) || 0,
       servings: parseInt(servings, 10) || 1,
@@ -160,7 +185,9 @@ export default function RecipeForm({
             : r.unit,
           secukupnya: r.secukupnya,
         })),
-      steps: steps.filter((r) => r.text.trim()).map((r) => ({ text: r.text.trim() })),
+      steps: steps
+        .filter((r) => r.text.trim())
+        .map((r) => ({ text: r.text.trim(), photos: r.photos })),
       isPublic,
     };
     setSaving(true);
@@ -241,12 +268,24 @@ export default function RecipeForm({
         />
       </Field>
 
-      <Field label="Kategori">
+      <Field label="Kategori" error={errors.category}>
         <ChipGroup
-          options={CATEGORIES.map((c) => ({ value: c.value, label: c.value, dot: c.dot }))}
-          selected={category}
-          onSelect={(v) => setCategory(v as Category)}
+          options={[
+            ...CATEGORIES.map((c) => ({ value: c.value, label: c.value, dot: c.dot })),
+            { value: CUSTOM_CATEGORY, label: "Lainnya..." },
+          ]}
+          selected={categoryChoice}
+          onSelect={(v) => setCategoryChoice(v)}
         />
+        {categoryChoice === CUSTOM_CATEGORY && (
+          <input
+            value={customCategory}
+            onChange={(e) => setCustomCategory(e.target.value)}
+            placeholder="Ketik nama kategori sendiri (mis. Jajanan Pasar)"
+            className="mt-2.5 w-full max-w-[360px] rounded-xl2 border-2 px-3.5 py-2.5 text-sm"
+            style={{ ...(errors.category ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
+          />
+        )}
       </Field>
 
       <div className="mb-5 grid grid-cols-3 gap-3.5">
@@ -379,8 +418,8 @@ export default function RecipeForm({
         </div>
       </Field>
 
-      <Field label="Langkah-langkah" error={errors.steps}>
-        <div className="flex flex-col gap-2.5">
+      <Field label="Langkah-langkah — bisa tambah foto tiap langkah (opsional)" error={errors.steps}>
+        <div className="flex flex-col gap-3.5">
           {steps.map((row, idx) => (
             <div key={row.key} className="flex items-start gap-2.5">
               <span
@@ -389,13 +428,60 @@ export default function RecipeForm({
               >
                 {idx + 1}
               </span>
-              <textarea
-                value={row.text}
-                onChange={(e) => updateStep(row.key, e.target.value)}
-                placeholder="Tuliskan langkah memasak..."
-                className="min-h-[44px] flex-1 resize-y rounded-lg border-2 px-3 py-2 text-sm"
-                style={{ ...(errors.steps ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
-              />
+              <div className="flex-1">
+                <textarea
+                  value={row.text}
+                  onChange={(e) => updateStep(row.key, e.target.value)}
+                  placeholder="Tuliskan langkah memasak..."
+                  className="min-h-[44px] w-full resize-y rounded-lg border-2 px-3 py-2 text-sm"
+                  style={{ ...(errors.steps ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {row.photos.map((src, pi) => (
+                    <div key={pi} className="relative h-[54px] w-[72px] overflow-hidden rounded-lg border" style={{ borderColor: "var(--card-border)" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt={`Foto langkah ${idx + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSteps((rows) =>
+                            rows.map((r) =>
+                              r.key === row.key
+                                ? { ...r, photos: r.photos.filter((_, i) => i !== pi) }
+                                : r
+                            )
+                          )
+                        }
+                        aria-label="Hapus foto langkah"
+                        className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full border-none text-white"
+                        style={{ background: "rgba(0,0,0,.55)" }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 10, height: 10 }}>
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  <label
+                    className="flex h-[54px] w-[72px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed text-muted2"
+                    style={{ borderColor: "var(--input-border)" }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 15, height: 15 }}>
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="9" cy="9" r="2" />
+                      <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                    <span className="text-[9px] font-semibold">Foto</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleAddStepPhotos(row.key, e.target.files)}
+                    />
+                  </label>
+                </div>
+              </div>
               <button
                 type="button"
                 disabled={steps.length <= 1}
@@ -412,7 +498,7 @@ export default function RecipeForm({
           ))}
           <button
             type="button"
-            onClick={() => setSteps((rows) => [...rows, { key: rowKey(), text: "" }])}
+            onClick={() => setSteps((rows) => [...rows, { key: rowKey(), text: "", photos: [] }])}
             className="w-fit rounded-lg border-2 border-dashed px-3.5 py-2 text-sm font-semibold text-muted"
             style={{ borderColor: "var(--input-border)" }}
           >

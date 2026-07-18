@@ -24,4 +24,25 @@ Tambahan (batch 2):
 - kolak.jpg — "Kolak Pisang.jpg"
 - brownies.jpg — "Brownies Kukus Coklat.jpg"
 
+Tambahan (batch 3 — untuk 50 resep):
+
+- nasi-uduk.jpg — "Nasi uduk lila.jpg"
+- ayam-geprek.jpg — "Ayam Geprek Uyat.jpg"
+- capcay.jpg — "Cap Cai.JPG"
+- bubur-ayam.jpg — "Bubur ayam chicken porridge.JPG"
+- pecel-lele.jpg — "Pecel Lele 1.JPG"
+- nasi-kuning.jpg — "Nasi Kuning dan Ungkep Ayam.jpg"
+- cireng.jpg — "Rujak cireng, Purwokerto 2015-03-22.jpg"
+- seblak.jpg — "Seblak 2.jpg"
+- lumpia.jpg — "Loenpia Semarang.JPG"
+- kue-cubit.jpg — "Kue cubit.jpg"
+- opor-ayam.jpg — "Opor Ayam Telur Pindang.JPG"
+- gudeg.jpg — "Gudeg Ayam.jpg"
+- rawon.jpg — "Rawon (dish).jpg"
+- bakwan.jpg — "Bakwan Sayur.jpg"
+- ketoprak.jpg — "Ketoprak Boplo.JPG"
+- nasi-padang.jpg — "Nasi padang.jpg"
+- nasi-pecel.jpg — "Nasi Pecel Surabaya.jpg"
+- es-jeruk.jpg — "Es jeruk peras.jpg"
+
 Sumber: commons.wikimedia.org. Sebelum dipakai untuk produksi/publik, cek ulang lisensi & atribusi tiap file di halaman deskripsinya masing-masing.
