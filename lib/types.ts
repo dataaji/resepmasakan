@@ -1,6 +1,6 @@
 export type Category = "Makanan" | "Camilan" | "Minuman" | "Kue & Dessert";
 export type Difficulty = "Mudah" | "Sedang" | "Sulit";
-export type UserRole = "user" | "admin";
+export type UserRole = "user" | "admin" | "super_admin";
 export type UserStatus = "active" | "suspended" | "banned";
 export type ReportStatus = "pending" | "resolved";
 
@@ -32,6 +32,7 @@ export interface Recipe {
   title: string;
   category: Category;
   imageUrl: string | null;
+  images: string[];
   placeholderIndex: number;
   cookTimeMinutes: number;
   servings: number;
@@ -48,7 +49,7 @@ export interface Recipe {
 export interface RecipeInput {
   title: string;
   category: Category;
-  imageDataUrl: string | null;
+  imageDataUrls: string[];
   cookTimeMinutes: number;
   servings: number;
   difficulty: Difficulty;
@@ -103,5 +104,17 @@ export interface CommentReport {
   reporterId: string;
   reason: string;
   status: ReportStatus;
+  createdAt: number;
+}
+
+export type NotificationType = "like" | "comment" | "rating" | "fork";
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  actorId: string;
+  type: NotificationType;
+  recipeId: string | null;
+  read: boolean;
   createdAt: number;
 }

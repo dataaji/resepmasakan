@@ -21,6 +21,7 @@ function EditRecipeContent() {
   const recipe = useAppStore((s) => s.recipes.find((r) => r.id === recipeId));
   const loadRecipeDetail = useAppStore((s) => s.loadRecipeDetail);
   const updateRecipe = useAppStore((s) => s.updateRecipe);
+  const showToast = useAppStore((s) => s.showToast);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ function EditRecipeContent() {
       initial={recipe}
       onSubmit={async (input) => {
         await updateRecipe(recipe.id, input);
+        showToast("Perubahan tersimpan");
         router.push(`/resep?id=${recipe.id}`);
       }}
     />

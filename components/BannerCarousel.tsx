@@ -17,7 +17,7 @@ export default function BannerCarousel() {
 
   return (
     <div
-      className="relative mb-7 flex min-h-[180px] items-center overflow-hidden rounded-xl4"
+      className="relative mb-7 flex min-h-[200px] items-center overflow-hidden rounded-xl4"
       style={{ background: banner.gradient }}
       onTouchStart={(e) => (touchStartX.current = e.touches[0].clientX)}
       onTouchEnd={(e) => {
@@ -26,6 +26,23 @@ export default function BannerCarousel() {
         else if (delta < -40) go(1);
       }}
     >
+      {banner.imageUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={banner.imageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(20,12,8,.82) 0%, rgba(20,12,8,.55) 45%, rgba(20,12,8,.15) 100%)",
+            }}
+          />
+        </>
+      )}
       <button
         type="button"
         onClick={() => go(-1)}

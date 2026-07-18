@@ -12,6 +12,8 @@ export default function MyRecipesPage() {
   const authLoading = useAppStore((s) => s.authLoading);
   const loadMine = useAppStore((s) => s.loadMine);
   const deleteRecipe = useAppStore((s) => s.deleteRecipe);
+  const askConfirm = useAppStore((s) => s.askConfirm);
+  const showToast = useAppStore((s) => s.showToast);
   const recipes = useAppStore((s) =>
     s.recipes.filter((r) => r.userId === s.profile?.id)
   );
@@ -74,11 +76,16 @@ export default function MyRecipesPage() {
               recipe={recipe}
               variant="mine"
               onEdit={() => router.push(`/resep-saya/edit?id=${recipe.id}`)}
-              onDelete={() => {
-                if (window.confirm(`Hapus resep "${recipe.title}"?`)) {
-                  deleteRecipe(recipe.id);
-                }
-              }}
+              onDelete={() =>
+                askConfirm({
+                  title: "Hapus resep?",
+                  message: `Resep "${recipe.title}" akan dihapus permanen beserta semua rating dan komentarnya.`,
+                  onConfirm: async () => {
+                    await deleteRecipe(recipe.id);
+                    showToast("Resep dihapus");
+                  },
+                })
+              }
             />
           ))}
         </div>

@@ -10,6 +10,9 @@ import {
   RecipeReport,
   CommentReport,
   RecipeInput,
+  AppNotification,
+  NotificationType,
+  UserRole,
 } from "./types";
 import {
   rowToProfile,
@@ -20,11 +23,26 @@ import {
   rowToComment,
   rowToRecipeReport,
   rowToCommentReport,
+  rowToNotification,
   recipeInputToRow,
   upsertById,
   upsertByPair,
 } from "./db";
 import { uid } from "./utils";
+
+export interface ConfirmRequest {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger: boolean;
+  onConfirm: () => void;
+}
+
+export interface ToastItem {
+  id: string;
+  message: string;
+  kind: "success" | "error";
+}
 
 interface AppState {
   profile: Profile | null;
@@ -40,15 +58,29 @@ interface AppState {
   comments: Comment[];
   recipeReports: RecipeReport[];
   commentReports: CommentReport[];
+  notifications: AppNotification[];
 
   publicLoaded: boolean;
   myReportedRecipeIds: string[];
   myReportedCommentIds: string[];
 
+  confirmRequest: ConfirmRequest | null;
+  toasts: ToastItem[];
+  askConfirm: (req: Omit<ConfirmRequest, "danger" | "confirmLabel"> & Partial<Pick<ConfirmRequest, "danger" | "confirmLabel">>) => void;
+  closeConfirm: () => void;
+  showToast: (message: string, kind?: "success" | "error") => void;
+  dismissToast: (id: string) => void;
+
   initAuth: () => void;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   toggleTheme: () => void;
+
+  loadNotifications: () => Promise<void>;
+  markNotificationsRead: () => Promise<void>;
+  updateProfile: (name: string, avatarDataUrl: string | null) => Promise<boolean>;
+  setUserRole: (userId: string, role: UserRole) => Promise<void>;
 
   loadPublic: () => Promise<void>;
   loadRecipeDetail: (id: string) => Promise<void>;
@@ -79,6 +111,21 @@ interface AppState {
 
 let authInitialized = false;
 
+async function createNotification(
+  actorId: string,
+  ownerId: string,
+  type: NotificationType,
+  recipeId: string
+) {
+  if (actorId === ownerId) return;
+  await supabase.from("notifications").insert({
+    user_id: ownerId,
+    actor_id: actorId,
+    type,
+    recipe_id: recipeId,
+  });
+}
+
 export const useAppStore = create<AppState>()((set, get) => ({
   profile: null,
   authLoading: true,
@@ -93,10 +140,34 @@ export const useAppStore = create<AppState>()((set, get) => ({
   comments: [],
   recipeReports: [],
   commentReports: [],
+  notifications: [],
 
   publicLoaded: false,
   myReportedRecipeIds: [],
   myReportedCommentIds: [],
+
+  confirmRequest: null,
+  toasts: [],
+  askConfirm: (req) =>
+    set({
+      confirmRequest: {
+        title: req.title,
+        message: req.message,
+        confirmLabel: req.confirmLabel ?? "Hapus",
+        danger: req.danger ?? true,
+        onConfirm: req.onConfirm,
+      },
+    }),
+  closeConfirm: () => set({ confirmRequest: null }),
+  showToast: (message, kind = "success") => {
+    const id = uid();
+    set((s) => ({ toasts: [...s.toasts, { id, message, kind }] }));
+    setTimeout(() => {
+      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    }, 3500);
+  },
+  dismissToast: (id) =>
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   initAuth: () => {
     if (authInitialized) return;
@@ -155,9 +226,96 @@ export const useAppStore = create<AppState>()((set, get) => ({
     });
   },
 
+  signInWithEmail: async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return "Email atau kata sandi salah.";
+    return null;
+  },
+
+  loadNotifications: async () => {
+    const me = get().profile;
+    if (!me) return;
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", me.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    const notifications = (data ?? []).map(rowToNotification);
+    const actorIds = Array.from(new Set(notifications.map((n) => n.actorId)));
+    const recipeIds = Array.from(
+      new Set(notifications.map((n) => n.recipeId).filter(Boolean))
+    ) as string[];
+    const [actorsRes, recipesRes] = await Promise.all([
+      actorIds.length
+        ? supabase.from("profiles").select("*").in("id", actorIds)
+        : Promise.resolve({ data: [] } as any),
+      recipeIds.length
+        ? supabase.from("recipes").select("*").in("id", recipeIds)
+        : Promise.resolve({ data: [] } as any),
+    ]);
+    set((s) => ({
+      notifications,
+      profiles: upsertById(s.profiles, (actorsRes.data ?? []).map(rowToProfile)),
+      recipes: upsertById(s.recipes, (recipesRes.data ?? []).map(rowToRecipe)),
+    }));
+  },
+
+  markNotificationsRead: async () => {
+    const me = get().profile;
+    if (!me) return;
+    set((s) => ({
+      notifications: s.notifications.map((n) => ({ ...n, read: true })),
+    }));
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", me.id)
+      .eq("read", false);
+  },
+
+  updateProfile: async (name, avatarDataUrl) => {
+    const me = get().profile;
+    if (!me) return false;
+    let avatarUrl = me.avatarUrl;
+    if (avatarDataUrl && avatarDataUrl.startsWith("data:")) {
+      const uploaded = await get().uploadPhotoFromDataUrl(avatarDataUrl);
+      if (uploaded) avatarUrl = uploaded;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ name: name.trim(), avatar_url: avatarUrl })
+      .eq("id", me.id);
+    if (error) return false;
+    const updated = { ...me, name: name.trim(), avatarUrl };
+    set((s) => ({
+      profile: updated,
+      profiles: upsertById(s.profiles, [updated]),
+    }));
+    return true;
+  },
+
+  setUserRole: async (userId, role) => {
+    const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
+    if (error) {
+      get().showToast("Gagal mengubah role (hanya super admin yang bisa)", "error");
+      return;
+    }
+    set((s) => ({
+      profiles: s.profiles.map((p) => (p.id === userId ? { ...p, role } : p)),
+    }));
+    get().showToast(role === "admin" ? "Pengguna dijadikan admin" : "Akses admin dicabut");
+  },
+
   signOut: async () => {
     await supabase.auth.signOut();
-    set({ profile: null, bookmarks: [], recipeReports: [], commentReports: [] });
+    set({
+      profile: null,
+      bookmarks: [],
+      recipeReports: [],
+      commentReports: [],
+      notifications: [],
+    });
   },
 
   toggleTheme: () => {
@@ -346,15 +504,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   addRecipe: async (input) => {
     const me = get().profile;
     if (!me) return null;
-    let imageUrl: string | null = null;
-    if (input.imageDataUrl) {
-      imageUrl = input.imageDataUrl.startsWith("data:")
-        ? await get().uploadPhotoFromDataUrl(input.imageDataUrl)
-        : input.imageDataUrl;
+    const imageUrls: string[] = [];
+    for (const src of input.imageDataUrls) {
+      const url = src.startsWith("data:") ? await get().uploadPhotoFromDataUrl(src) : src;
+      if (url) imageUrls.push(url);
     }
     const { data, error } = await supabase
       .from("recipes")
-      .insert(recipeInputToRow(input, imageUrl, me.id))
+      .insert(recipeInputToRow(input, imageUrls, me.id))
       .select("*")
       .single();
     if (error || !data) return null;
@@ -365,14 +522,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
   updateRecipe: async (id, input) => {
     const me = get().profile;
     if (!me) return;
-    const existing = get().recipes.find((r) => r.id === id);
-    let imageUrl: string | null = existing?.imageUrl ?? null;
-    if (input.imageDataUrl) {
-      imageUrl = input.imageDataUrl.startsWith("data:")
-        ? (await get().uploadPhotoFromDataUrl(input.imageDataUrl)) ?? imageUrl
-        : input.imageDataUrl;
+    const imageUrls: string[] = [];
+    for (const src of input.imageDataUrls) {
+      const url = src.startsWith("data:") ? await get().uploadPhotoFromDataUrl(src) : src;
+      if (url) imageUrls.push(url);
     }
-    const row = recipeInputToRow(input, imageUrl, me.id);
+    const row = recipeInputToRow(input, imageUrls, me.id);
     const { data } = await supabase.from("recipes").update(row).eq("id", id).select("*").single();
     if (data) set((s) => ({ recipes: upsertById(s.recipes, [rowToRecipe(data)]) }));
   },
@@ -409,6 +564,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
         title: source.title,
         category: source.category,
         image_url: source.imageUrl,
+        images: source.images,
         cook_time_minutes: source.cookTimeMinutes,
         servings: source.servings,
         difficulty: source.difficulty,
@@ -428,6 +584,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       .single();
     if (error || !data) return null;
     set((s) => ({ recipes: upsertById(s.recipes, [rowToRecipe(data)]) }));
+    createNotification(me.id, source.userId, "fork", source.id);
     return data.id;
   },
 
@@ -445,6 +602,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
         likes: [...s.likes, { userId: me.id, recipeId, createdAt: Date.now() }],
       }));
       await supabase.from("likes").insert({ user_id: me.id, recipe_id: recipeId });
+      const recipe = get().recipes.find((r) => r.id === recipeId);
+      if (recipe) createNotification(me.id, recipe.userId, "like", recipeId);
     }
   },
 
@@ -498,6 +657,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
           [rowToRating(data)]
         ),
       }));
+      if (!existing) {
+        const recipe = get().recipes.find((r) => r.id === recipeId);
+        if (recipe) createNotification(me.id, recipe.userId, "rating", recipeId);
+      }
     }
   },
 
@@ -511,6 +674,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
       .single();
     if (data) {
       set((s) => ({ comments: upsertById(s.comments, [rowToComment(data)]) }));
+      const recipe = get().recipes.find((r) => r.id === recipeId);
+      if (recipe) createNotification(me.id, recipe.userId, "comment", recipeId);
     }
   },
 

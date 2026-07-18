@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, DIFFICULTIES, UNIT_GROUPS } from "@/lib/constants";
 import { Category, Difficulty, Recipe, RecipeInput } from "@/lib/types";
 import ChipGroup from "@/components/ChipGroup";
-import ImageUpload from "@/components/ImageUpload";
+import { fileToCompressedDataUrl } from "@/lib/utils";
 
 const CUSTOM_UNIT = "__custom__";
 const KNOWN_UNITS = UNIT_GROUPS.flatMap((g) => g.units);
@@ -22,6 +22,14 @@ interface IngredientRow {
 interface StepRow {
   key: string;
   text: string;
+}
+
+interface FormErrors {
+  title?: string;
+  cookTime?: string;
+  servings?: string;
+  ingredients?: string;
+  steps?: string;
 }
 
 function rowKey() {
@@ -52,6 +60,12 @@ function toStepRows(recipe?: Recipe): StepRow[] {
   return recipe.steps.map((s) => ({ key: rowKey(), text: s.text }));
 }
 
+function toPhotos(recipe?: Recipe): string[] {
+  if (!recipe) return [];
+  if (recipe.images.length > 0) return recipe.images;
+  return recipe.imageUrl ? [recipe.imageUrl] : [];
+}
+
 export default function RecipeForm({
   headerLabel,
   initial,
@@ -64,7 +78,7 @@ export default function RecipeForm({
   const router = useRouter();
 
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [photo, setPhoto] = useState<string | null>(initial?.imageUrl ?? null);
+  const [photos, setPhotos] = useState<string[]>(toPhotos(initial));
   const [category, setCategory] = useState<Category>(initial?.category ?? "Makanan");
   const [cookTime, setCookTime] = useState(initial ? String(initial.cookTimeMinutes) : "");
   const [servings, setServings] = useState(initial ? String(initial.servings) : "");
@@ -79,6 +93,11 @@ export default function RecipeForm({
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [isPublic, setIsPublic] = useState(initial?.isPublic ?? false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const formTopRef = useRef<HTMLDivElement>(null);
 
   function updateIngredient(key: string, patch: Partial<IngredientRow>) {
     setIngredients((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -87,11 +106,43 @@ export default function RecipeForm({
     setSteps((rows) => rows.map((r) => (r.key === key ? { ...r, text } : r)));
   }
 
+  async function handleAddPhotos(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setPhotoBusy(true);
+    try {
+      for (const file of Array.from(files)) {
+        const dataUrl = await fileToCompressedDataUrl(file);
+        setPhotos((p) => [...p, dataUrl]);
+      }
+    } finally {
+      setPhotoBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  function validate(): FormErrors {
+    const e: FormErrors = {};
+    if (!title.trim()) e.title = "Judul resep wajib diisi";
+    if (!cookTime.trim() || parseInt(cookTime, 10) <= 0)
+      e.cookTime = "Waktu masak wajib diisi";
+    if (!servings.trim() || parseInt(servings, 10) <= 0) e.servings = "Porsi wajib diisi";
+    if (!ingredients.some((r) => r.name.trim()))
+      e.ingredients = "Isi minimal satu bahan";
+    if (!steps.some((r) => r.text.trim())) e.steps = "Isi minimal satu langkah";
+    return e;
+  }
+
   async function handleSave() {
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length > 0) {
+      formTopRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
     const input: RecipeInput = {
       title: title.trim(),
       category,
-      imageDataUrl: photo,
+      imageDataUrls: photos,
       cookTimeMinutes: parseInt(cookTime, 10) || 0,
       servings: parseInt(servings, 10) || 1,
       difficulty,
@@ -120,21 +171,73 @@ export default function RecipeForm({
     }
   }
 
-  return (
-    <div className="mx-auto max-w-[820px] px-8 pb-16 pt-7">
-      <h1 className="font-display m-0 mb-6 text-[28px] font-semibold text-ink">{headerLabel}</h1>
+  const errBorder = { borderColor: "#C23A3A" };
+  const okBorder = { borderColor: "var(--input-border)" };
 
-      <Field label="Foto resep">
-        <ImageUpload value={photo} gradientIndex={0} onChange={setPhoto} />
+  return (
+    <div className="mx-auto max-w-[820px] px-8 pb-16 pt-7" ref={formTopRef}>
+      <h1 className="font-display m-0 mb-2 text-[28px] font-semibold text-ink">{headerLabel}</h1>
+      {Object.keys(errors).length > 0 && (
+        <p className="m-0 mb-5 rounded-lg px-3.5 py-2.5 text-sm font-semibold" style={{ background: "#FADADA", color: "#791F1F" }}>
+          Ada bagian yang belum lengkap — periksa tanda merah di bawah.
+        </p>
+      )}
+
+      <Field label={`Foto resep (${photos.length}) — foto pertama jadi sampul`}>
+        <div className="flex flex-wrap gap-3">
+          {photos.map((src, i) => (
+            <div key={i} className="relative h-[110px] w-[150px] overflow-hidden rounded-xl2 border" style={{ borderColor: "var(--card-border)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+              {i === 0 && (
+                <span className="absolute left-1.5 top-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#FF5A36" }}>
+                  Sampul
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setPhotos((p) => p.filter((_, idx) => idx !== i))}
+                aria-label="Hapus foto"
+                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-none text-white"
+                style={{ background: "rgba(0,0,0,.55)" }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 11, height: 11 }}>
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={photoBusy}
+            className="flex h-[110px] w-[150px] flex-col items-center justify-center gap-1.5 rounded-xl2 border-2 border-dashed text-muted disabled:opacity-50"
+            style={{ borderColor: "var(--input-border)", background: "var(--card)" }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 20, height: 20 }}>
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span className="text-xs font-semibold">{photoBusy ? "Memproses..." : "Tambah foto"}</span>
+          </button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => handleAddPhotos(e.target.files)}
+        />
       </Field>
 
-      <Field label="Judul resep">
+      <Field label="Judul resep" error={errors.title}>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="mis. Nasi Goreng Kampung"
           className="w-full rounded-xl2 border-2 px-3.5 py-2.5 text-[15px]"
-          style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
+          style={{ ...(errors.title ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
         />
       </Field>
 
@@ -147,27 +250,27 @@ export default function RecipeForm({
       </Field>
 
       <div className="mb-5 grid grid-cols-3 gap-3.5">
-        <Field label="Waktu masak (menit)">
+        <Field label="Waktu masak (menit)" error={errors.cookTime} compact>
           <input
             type="number"
             min={0}
             value={cookTime}
             onChange={(e) => setCookTime(e.target.value)}
             className="w-full rounded-xl2 border-2 px-3.5 py-2.5 text-[15px]"
-            style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
+            style={{ ...(errors.cookTime ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
           />
         </Field>
-        <Field label="Porsi">
+        <Field label="Porsi" error={errors.servings} compact>
           <input
             type="number"
             min={1}
             value={servings}
             onChange={(e) => setServings(e.target.value)}
             className="w-full rounded-xl2 border-2 px-3.5 py-2.5 text-[15px]"
-            style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
+            style={{ ...(errors.servings ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
           />
         </Field>
-        <Field label="Estimasi biaya (Rp, opsional)">
+        <Field label="Estimasi biaya (Rp, opsional)" compact>
           <input
             type="number"
             min={0}
@@ -187,7 +290,7 @@ export default function RecipeForm({
         />
       </Field>
 
-      <Field label="Bahan-bahan">
+      <Field label="Bahan-bahan" error={errors.ingredients}>
         <div className="flex flex-col gap-2.5">
           {ingredients.map((row) => (
             <div key={row.key} className="flex flex-wrap items-center gap-2">
@@ -196,7 +299,7 @@ export default function RecipeForm({
                 onChange={(e) => updateIngredient(row.key, { name: e.target.value })}
                 placeholder="Nama bahan"
                 className="min-w-[160px] flex-1 rounded-lg border-2 px-3 py-2 text-sm"
-                style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
+                style={{ ...(errors.ingredients ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
               />
               <input
                 type="number"
@@ -276,7 +379,7 @@ export default function RecipeForm({
         </div>
       </Field>
 
-      <Field label="Langkah-langkah">
+      <Field label="Langkah-langkah" error={errors.steps}>
         <div className="flex flex-col gap-2.5">
           {steps.map((row, idx) => (
             <div key={row.key} className="flex items-start gap-2.5">
@@ -291,7 +394,7 @@ export default function RecipeForm({
                 onChange={(e) => updateStep(row.key, e.target.value)}
                 placeholder="Tuliskan langkah memasak..."
                 className="min-h-[44px] flex-1 resize-y rounded-lg border-2 px-3 py-2 text-sm"
-                style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
+                style={{ ...(errors.steps ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
               />
               <button
                 type="button"
@@ -355,7 +458,7 @@ export default function RecipeForm({
         </button>
         <button
           type="button"
-          disabled={!title.trim() || saving}
+          disabled={saving}
           onClick={handleSave}
           className="rounded-2xl border-none px-6.5 py-3 text-sm font-semibold text-white disabled:opacity-40"
           style={{ background: "#FF5A36" }}
@@ -367,11 +470,31 @@ export default function RecipeForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  compact,
+  children,
+}: {
+  label: string;
+  error?: string;
+  compact?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="mb-5">
-      <label className="mb-2 block text-[13px] font-semibold text-muted">{label}</label>
+    <div className={compact ? "" : "mb-5"}>
+      <label
+        className="mb-2 block text-[13px] font-semibold"
+        style={{ color: error ? "#C23A3A" : "var(--muted)" }}
+      >
+        {label}
+      </label>
       {children}
+      {error && (
+        <p className="m-0 mt-1.5 text-xs font-semibold" style={{ color: "#C23A3A" }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

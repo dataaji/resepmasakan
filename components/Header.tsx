@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
@@ -10,7 +11,6 @@ const NAV_ITEMS = [
   { href: "/peringkat", label: "Peringkat" },
   { href: "/resep-saya", label: "Resep Saya" },
   { href: "/koleksi", label: "Koleksi" },
-  { href: "/profil", label: "Profil" },
 ];
 
 export default function Header() {
@@ -20,8 +20,33 @@ export default function Header() {
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const signOut = useAppStore((s) => s.signOut);
+  const loadNotifications = useAppStore((s) => s.loadNotifications);
+  const unreadCount = useAppStore(
+    (s) => s.notifications.filter((n) => !n.read).length
+  );
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === "dark";
+
+  useEffect(() => {
+    if (profile) loadNotifications();
+  }, [profile, loadNotifications]);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
     <div
@@ -36,28 +61,13 @@ export default function Header() {
         className="flex flex-none items-center gap-2.5"
         style={{ color: "inherit" }}
       >
-        <div
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-xl2"
-          style={{
-            background: "linear-gradient(135deg,#FF5A36,#FFC93C)",
-            boxShadow: "0 3px 8px rgba(255,90,54,.35)",
-          }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#fff"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ width: 18, height: 18 }}
-          >
-            <path d="M6 2v7a3 3 0 0 0 3 3v10" />
-            <path d="M6 2v7" />
-            <path d="M9 2v7" />
-            <path d="M18 2c-1.5 2-2 4-2 7 0 2 1 3 2 3v10" />
-          </svg>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.svg"
+          alt="Logo Kulinara"
+          className="h-[36px] w-[36px]"
+          style={{ boxShadow: "0 3px 8px rgba(255,90,54,.35)", borderRadius: 10 }}
+        />
         <span
           className="font-display text-[25px] font-bold"
           style={{ color: "#FF5A36" }}
@@ -68,7 +78,7 @@ export default function Header() {
 
       <nav
         className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto rounded-2xl p-1"
-        style={{ background: "var(--nav-wrap)", maxWidth: 520, flexBasis: 340 }}
+        style={{ background: "var(--nav-wrap)", maxWidth: 460, flexBasis: 300 }}
       >
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href;
@@ -97,7 +107,7 @@ export default function Header() {
           FAQ
         </Link>
 
-        {profile?.role === "admin" && (
+        {profile && (profile.role === "admin" || profile.role === "super_admin") && (
           <Link
             href="/admin"
             title="Panel Admin"
@@ -109,17 +119,25 @@ export default function Header() {
         )}
 
         {profile && (
-          <button
-            type="button"
-            onClick={async () => {
-              await signOut();
-              router.push("/");
-            }}
-            className="flex-none rounded-xl2 border px-4 py-2 text-[13px] font-semibold"
+          <Link
+            href="/notifikasi"
+            title="Notifikasi"
+            className="relative flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full border"
             style={{ borderColor: "var(--card-border)", background: "var(--card)", color: "var(--ink)" }}
           >
-            Keluar
-          </button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 17, height: 17 }}>
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+            </svg>
+            {unreadCount > 0 && (
+              <span
+                className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                style={{ background: "#C23A3A" }}
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Link>
         )}
 
         <button
@@ -149,26 +167,81 @@ export default function Header() {
         </button>
 
         {profile ? (
-          profile.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.avatarUrl}
-              alt={profile.name}
-              referrerPolicy="no-referrer"
-              className="h-[38px] w-[38px] flex-none rounded-full object-cover"
-              style={{ boxShadow: "0 3px 8px rgba(255,90,54,.3)" }}
-            />
-          ) : (
-            <div
-              className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full text-[13px] font-bold text-white"
-              style={{
-                background: "linear-gradient(135deg,#FF5A36,#FFC93C)",
-                boxShadow: "0 3px 8px rgba(255,90,54,.3)",
-              }}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="block"
+              aria-label="Menu profil"
             >
-              {initials(profile.name)}
-            </div>
-          )
+              {profile.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.name}
+                  referrerPolicy="no-referrer"
+                  className="h-[38px] w-[38px] flex-none rounded-full object-cover"
+                  style={{ boxShadow: "0 3px 8px rgba(255,90,54,.3)" }}
+                />
+              ) : (
+                <div
+                  className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full text-[13px] font-bold text-white"
+                  style={{
+                    background: "linear-gradient(135deg,#FF5A36,#FFC93C)",
+                    boxShadow: "0 3px 8px rgba(255,90,54,.3)",
+                  }}
+                >
+                  {initials(profile.name)}
+                </div>
+              )}
+            </button>
+
+            {menuOpen && (
+              <div
+                className="absolute right-0 top-[46px] w-[220px] overflow-hidden rounded-2xl border shadow-xl"
+                style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+              >
+                <div className="border-b px-4 py-3" style={{ borderColor: "var(--card-border)" }}>
+                  <p className="m-0 truncate text-sm font-semibold text-ink">{profile.name}</p>
+                  <p className="m-0 text-xs text-muted2">
+                    {profile.role === "super_admin"
+                      ? "Super Admin"
+                      : profile.role === "admin"
+                      ? "Admin"
+                      : "Pengguna"}
+                  </p>
+                </div>
+                <Link
+                  href="/profil"
+                  className="flex items-center gap-2.5 px-4 py-3 text-sm font-semibold"
+                  style={{ color: "var(--ink)" }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 15, height: 15 }}>
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+                  </svg>
+                  Pengaturan Profil
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setMenuOpen(false);
+                    await signOut();
+                    router.push("/");
+                  }}
+                  className="flex w-full items-center gap-2.5 border-none bg-transparent px-4 py-3 text-left text-sm font-semibold"
+                  style={{ color: "#C23A3A" }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 15, height: 15 }}>
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Keluar
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <Link
             href="/masuk"

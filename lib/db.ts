@@ -46,12 +46,16 @@ export function rowToRecipe(row: any): Recipe {
     n: idx + 1,
     text: String(text),
   }));
+  const images: string[] = Array.isArray(row.images)
+    ? row.images.filter((x: any) => typeof x === "string")
+    : [];
   return {
     id: row.id,
     userId: row.user_id,
     title: row.title,
     category: row.category as Category,
-    imageUrl: row.image_url ?? null,
+    imageUrl: row.image_url ?? images[0] ?? null,
+    images,
     placeholderIndex: hashIndex(row.id, 6),
     cookTimeMinutes: row.cook_time_minutes ?? 0,
     servings: row.servings ?? 1,
@@ -114,6 +118,18 @@ export function rowToRecipeReport(row: any): RecipeReport {
   };
 }
 
+export function rowToNotification(row: any): import("./types").AppNotification {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    actorId: row.actor_id,
+    type: row.type,
+    recipeId: row.recipe_id ?? null,
+    read: !!row.read,
+    createdAt: new Date(row.created_at).getTime(),
+  };
+}
+
 export function rowToCommentReport(row: any): CommentReport {
   return {
     id: row.id,
@@ -138,14 +154,15 @@ export function recipeInputToRow(
     steps: { text: string }[];
     isPublic: boolean;
   },
-  imageUrl: string | null,
+  imageUrls: string[],
   userId: string
 ) {
   return {
     user_id: userId,
     title: input.title,
     category: input.category,
-    image_url: imageUrl,
+    image_url: imageUrls[0] ?? null,
+    images: imageUrls,
     cook_time_minutes: input.cookTimeMinutes,
     servings: input.servings,
     difficulty: input.difficulty,

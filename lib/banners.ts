@@ -4,6 +4,7 @@ export interface Banner {
   subtitle: string;
   ctaLabel: string;
   gradient: string;
+  imageUrl: string | null;
   href: string;
 }
 
@@ -14,6 +15,7 @@ export const BANNERS: Banner[] = [
     subtitle: "Resep autentik dengan rating tertinggi di Kulinara",
     ctaLabel: "Lihat Resep",
     gradient: "linear-gradient(120deg,#D94A24,#FF5A36)",
+    imageUrl: "/recipes/rendang.jpg",
     href: "/resep?id=aaaaaaaa-0000-4000-8000-000000000002",
   },
   {
@@ -22,6 +24,7 @@ export const BANNERS: Banner[] = [
     subtitle: "Ide masak praktis untuk hari yang sibuk",
     ctaLabel: "Jelajah Resep Kilat",
     gradient: "linear-gradient(120deg,#1D7A8C,#5DCAA5)",
+    imageUrl: "/recipes/mie-goreng.jpg",
     href: "/?time=15",
   },
   {
@@ -30,6 +33,7 @@ export const BANNERS: Banner[] = [
     subtitle: "Cocok dinikmati di cuaca yang panas",
     ctaLabel: "Lihat Resep",
     gradient: "linear-gradient(120deg,#7F77DD,#D94A8C)",
+    imageUrl: "/recipes/es-cendol.jpg",
     href: "/resep?id=aaaaaaaa-0000-4000-8000-000000000008",
   },
 ];

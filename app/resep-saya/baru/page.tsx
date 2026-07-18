@@ -10,6 +10,7 @@ export default function NewRecipePage() {
   const profile = useAppStore((s) => s.profile);
   const authLoading = useAppStore((s) => s.authLoading);
   const addRecipe = useAppStore((s) => s.addRecipe);
+  const showToast = useAppStore((s) => s.showToast);
 
   useEffect(() => {
     if (!authLoading && !profile) {
@@ -24,7 +25,12 @@ export default function NewRecipePage() {
       headerLabel="Tambah Resep Baru"
       onSubmit={async (input) => {
         const id = await addRecipe(input);
-        router.push(id ? `/resep?id=${id}` : "/resep-saya");
+        if (id) {
+          showToast("Resep tersimpan");
+          router.push(`/resep?id=${id}`);
+        } else {
+          showToast("Gagal menyimpan resep", "error");
+        }
       }}
     />
   );

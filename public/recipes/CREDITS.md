@@ -11,4 +11,17 @@ Foto contoh resep diambil dari Wikimedia Commons (lisensi bebas/CC), digunakan u
 - puding-coklat.jpg — "Chocolate pudding.jpg"
 - lapis-legit.jpg — "Lapis Legit Pontianak.jpg"
 
+Tambahan (batch 2):
+
+- soto-ayam.jpg — "Soto Ayam Kudus.jpg"
+- gado-gado.jpg — "Gado-gado in Jakarta.JPG"
+- bakso.jpg — "Bakso Indonesian Meatball Soup from Solo.jpg"
+- sate-ayam.jpg — "Sate Ayam Al-Huda Jember.jpg"
+- mie-goreng.jpg — "Mie goreng.jpg"
+- martabak.jpg — "Martabak Terang Bulan.jpg"
+- donat.jpg — "Golden Donut Sugar Coated Doughnut (15533318029).jpg"
+- es-campur.jpg — "Es Campur, 2019.jpg"
+- kolak.jpg — "Kolak Pisang.jpg"
+- brownies.jpg — "Brownies Kukus Coklat.jpg"
+
 Sumber: commons.wikimedia.org. Sebelum dipakai untuk produksi/publik, cek ulang lisensi & atribusi tiap file di halaman deskripsinya masing-masing.

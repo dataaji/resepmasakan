@@ -27,6 +27,8 @@ export default function AdminPage() {
   const resolveCommentReport = useAppStore((s) => s.resolveCommentReport);
   const suspendUser = useAppStore((s) => s.suspendUser);
   const banUser = useAppStore((s) => s.banUser);
+  const setUserRole = useAppStore((s) => s.setUserRole);
+  const askConfirm = useAppStore((s) => s.askConfirm);
 
   const [loaded, setLoaded] = useState(false);
 
@@ -136,7 +138,21 @@ export default function AdminPage() {
               {users.map((u) => (
                 <div key={u.id} className="flex flex-wrap items-center gap-3.5 rounded-2xl border p-3.5" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
                   <div className="min-w-[160px] flex-1">
-                    <p className="m-0 text-sm font-semibold text-ink">{u.name}</p>
+                    <p className="m-0 flex items-center gap-2 text-sm font-semibold text-ink">
+                      {u.name}
+                      {u.role !== "user" && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                          style={
+                            u.role === "super_admin"
+                              ? { background: "#EEEDFE", color: "#3C3489" }
+                              : { background: "#FFE1D6", color: "#D94A24" }
+                          }
+                        >
+                          {u.role === "super_admin" ? "Super Admin" : "Admin"}
+                        </span>
+                      )}
+                    </p>
                     <p className="m-0 text-xs text-muted">{recipeCountByUser[u.id] ?? 0} resep</p>
                   </div>
                   <span
@@ -151,7 +167,42 @@ export default function AdminPage() {
                   >
                     {u.status === "active" ? "Aktif" : u.status === "suspended" ? "Ditangguhkan" : "Diblokir"}
                   </span>
-                  <div className="flex flex-none gap-2">
+                  <div className="flex flex-none flex-wrap gap-2">
+                    {profile.role === "super_admin" && u.role !== "super_admin" && (
+                      u.role === "admin" ? (
+                        <AdminButton
+                          color="#3C3489"
+                          bg="#EEEDFE"
+                          onClick={() =>
+                            askConfirm({
+                              title: "Cabut akses admin?",
+                              message: `${u.name} tidak akan bisa lagi membuka panel admin.`,
+                              confirmLabel: "Cabut",
+                              danger: false,
+                              onConfirm: () => setUserRole(u.id, "user"),
+                            })
+                          }
+                        >
+                          Cabut Admin
+                        </AdminButton>
+                      ) : (
+                        <AdminButton
+                          color="#3C3489"
+                          bg="#EEEDFE"
+                          onClick={() =>
+                            askConfirm({
+                              title: "Jadikan admin?",
+                              message: `${u.name} akan bisa membuka panel admin dan memoderasi konten.`,
+                              confirmLabel: "Jadikan Admin",
+                              danger: false,
+                              onConfirm: () => setUserRole(u.id, "admin"),
+                            })
+                          }
+                        >
+                          Jadikan Admin
+                        </AdminButton>
+                      )
+                    )}
                     <AdminButton color="#A6740A" bg="#FFF3D1" onClick={() => suspendUser(u.id)}>
                       Tangguhkan
                     </AdminButton>

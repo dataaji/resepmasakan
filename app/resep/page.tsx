@@ -86,6 +86,7 @@ function RecipeDetailContent() {
   const [stagingPhoto, setStagingPhoto] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
     setMyStars(myRating?.stars ?? 0);
@@ -189,9 +190,9 @@ function RecipeDetailContent() {
         </div>
       )}
 
-      <div className="relative mb-5 aspect-[20/9] overflow-hidden rounded-xl4">
+      <div className="relative mb-3 aspect-[20/9] overflow-hidden rounded-xl4">
         <RecipePhoto
-          src={recipe.imageUrl}
+          src={recipe.images[activeImage] ?? recipe.imageUrl}
           gradientIndex={recipe.placeholderIndex}
           alt={recipe.title}
         />
@@ -217,6 +218,24 @@ function RecipeDetailContent() {
           <p className="m-0 text-sm text-white/80">oleh {authorName({ profiles }, recipe.userId)}</p>
         </div>
       </div>
+
+      {recipe.images.length > 1 && (
+        <div className="mb-5 flex gap-2.5 overflow-x-auto pb-1">
+          {recipe.images.map((src, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setActiveImage(i)}
+              className="h-[64px] w-[86px] flex-none overflow-hidden rounded-xl2 border-2"
+              style={{ borderColor: i === activeImage ? "#FF5A36" : "var(--card-border)" }}
+              aria-label={`Foto ${i + 1}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mb-5 grid gap-3.5" style={{ gridTemplateColumns: `repeat(${recipe.estimatedCost !== null ? 4 : 3},1fr)` }}>
         <StatCard icon="clock" bg="#FFE1D6" fg="#D94A24" label="Waktu Masak" value={formatCookTime(recipe.cookTimeMinutes)} />
