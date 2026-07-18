@@ -412,18 +412,6 @@ function RecipeDetailContent() {
               </div>
             </div>
           </div>
-          {isScaled && (
-            <p className="m-0 mb-2.5 text-xs text-muted2">
-              Takaran dikali untuk {portions} porsi (1 resep = 1 porsi).{" "}
-              <button
-                type="button"
-                onClick={() => setPortions(1)}
-                className="border-none bg-transparent p-0 font-semibold text-[#D94A24]"
-              >
-                Reset
-              </button>
-            </p>
-          )}
           <div className="flex flex-col gap-2.5">
             {recipe.ingredients.map((ing) => (
               <div
