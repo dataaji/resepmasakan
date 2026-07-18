@@ -12,15 +12,15 @@ export const CATEGORIES: { value: Category; dot: string }[] = [
   { value: "Seafood", dot: "#378ADD" },
 ];
 
-export const POPULAR_SEARCHES = [
-  "Ayam",
-  "Rendang",
-  "Pedas",
-  "Nasi goreng",
-  "Dessert",
-  "Sup",
-  "Sate",
-  "Es segar",
+export const POPULAR_SEARCHES: { label: string; image: string }[] = [
+  { label: "Nasi goreng", image: "/recipes/nasi-goreng.jpg" },
+  { label: "Ayam geprek", image: "/recipes/ayam-geprek.jpg" },
+  { label: "Rendang", image: "/recipes/rendang.jpg" },
+  { label: "Sate ayam", image: "/recipes/sate-ayam.jpg" },
+  { label: "Soto ayam", image: "/recipes/soto-ayam.jpg" },
+  { label: "Bakso", image: "/recipes/bakso.jpg" },
+  { label: "Es cendol", image: "/recipes/es-cendol.jpg" },
+  { label: "Mie goreng", image: "/recipes/mie-goreng.jpg" },
 ];
 
 export const DIFFICULTIES: Difficulty[] = ["Mudah", "Sedang", "Sulit"];

@@ -136,23 +136,38 @@ function HomeContent() {
 
       <BannerCarousel />
 
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-[13px] font-semibold text-muted">Pencarian populer:</span>
-        {POPULAR_SEARCHES.map((term) => (
-          <button
-            key={term}
-            type="button"
-            onClick={() => setFilters((f) => ({ ...f, search: term, category: "Semua" }))}
-            className="rounded-full border px-3 py-1.5 text-xs font-semibold"
-            style={{
-              borderColor: "var(--card-border)",
-              background: "var(--card)",
-              color: "var(--ink)",
-            }}
-          >
-            {term}
-          </button>
-        ))}
+      <div className="mb-7">
+        <h2 className="font-display mb-3 text-[19px] font-semibold text-ink">
+          Pencarian Populer
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {POPULAR_SEARCHES.map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => setFilters((f) => ({ ...f, search: s.label, category: "Semua" }))}
+              className="group relative h-[104px] overflow-hidden rounded-xl2 border text-left"
+              style={{ borderColor: "var(--card-border)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={s.image}
+                alt={s.label}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(20,12,8,.82) 0%, rgba(20,12,8,.25) 55%, rgba(20,12,8,.05) 100%)",
+                }}
+              />
+              <span className="absolute inset-x-3 bottom-2.5 text-[14px] font-bold text-white">
+                {s.label}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <p className="mb-4 text-[13px] text-muted">
