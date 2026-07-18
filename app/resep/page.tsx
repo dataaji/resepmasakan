@@ -102,8 +102,8 @@ function RecipeDetailContent() {
   }, [myRating?.stars]);
 
   useEffect(() => {
-    if (recipe?.servings) setPortions(recipe.servings);
-  }, [recipe?.servings]);
+    setPortions(1);
+  }, [recipeId]);
 
   if (!detailLoaded && !recipe) {
     return (
@@ -128,9 +128,9 @@ function RecipeDetailContent() {
   const isMine = profile?.id === recipe.userId;
   const diff = DIFF_COLORS[recipe.difficulty];
 
-  const baseServings = recipe.servings || 1;
-  const scale = portions / baseServings;
-  const isScaled = portions !== baseServings;
+  // Bahan resep ditulis untuk 1 porsi; kalkulator mengalikan per porsi.
+  const scale = portions;
+  const isScaled = portions !== 1;
   const fmtQty = (qty: number) => String(parseFloat((qty * scale).toFixed(2)));
 
   function requireLogin(action: () => void) {
@@ -257,7 +257,7 @@ function RecipeDetailContent() {
 
       <div className={`mb-5 grid grid-cols-2 gap-3 sm:gap-3.5 ${recipe.estimatedCost !== null ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <StatCard icon="clock" bg="#FFE1D6" fg="#D94A24" label="Waktu Masak" value={formatCookTime(recipe.cookTimeMinutes)} />
-        <StatCard icon="users" bg="#DDF3F6" fg="#1D7A8C" label="Porsi" value={`${recipe.servings} porsi`} />
+        <StatCard icon="users" bg="#DDF3F6" fg="#1D7A8C" label="1 porsi untuk" value={`${recipe.servings} orang`} />
         <StatCard icon="star" bg="#FFF3D1" fg="#A6740A" label="Rating" value={`${rating.toFixed(1)} / 5 (${ratingCount})`} />
         {recipe.estimatedCost !== null && (
           <StatCard icon="cost" bg="#E1F5E4" fg="#1F8A3B" label="Estimasi Biaya" value={`~${formatRupiah(recipe.estimatedCost)}`} />
@@ -381,7 +381,7 @@ function RecipeDetailContent() {
           <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display m-0 text-[19px] text-ink">Bahan-Bahan</h2>
             <div className="flex items-center gap-2">
-              <span className="text-[13px] font-semibold text-muted">Untuk</span>
+              <span className="text-[13px] font-semibold text-muted">Buat</span>
               <div
                 className="flex items-center gap-1 rounded-full border p-1"
                 style={{ borderColor: "var(--card-border)", background: "var(--card)" }}
@@ -414,10 +414,10 @@ function RecipeDetailContent() {
           </div>
           {isScaled && (
             <p className="m-0 mb-2.5 text-xs text-muted2">
-              Takaran disesuaikan untuk {portions} porsi (resep asli {baseServings} porsi).{" "}
+              Takaran dikali untuk {portions} porsi (1 resep = 1 porsi).{" "}
               <button
                 type="button"
-                onClick={() => setPortions(baseServings)}
+                onClick={() => setPortions(1)}
                 className="border-none bg-transparent p-0 font-semibold text-[#D94A24]"
               >
                 Reset
