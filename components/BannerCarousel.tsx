@@ -1,11 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BANNERS } from "@/lib/banners";
 
+const AUTOPLAY_MS = 5000;
+
 export default function BannerCarousel() {
   const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
   const router = useRouter();
   const touchStartX = useRef(0);
 
@@ -15,15 +18,30 @@ export default function BannerCarousel() {
     setIndex((i) => (i + delta + BANNERS.length) % BANNERS.length);
   }
 
+  // Jalan otomatis; berhenti saat kursor pengunjung ada di atas banner.
+  useEffect(() => {
+    if (paused || BANNERS.length <= 1) return;
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % BANNERS.length);
+    }, AUTOPLAY_MS);
+    return () => clearInterval(id);
+  }, [paused]);
+
   return (
     <div
       className="relative mb-7 flex min-h-[200px] items-center overflow-hidden rounded-xl4"
       style={{ background: banner.gradient }}
-      onTouchStart={(e) => (touchStartX.current = e.touches[0].clientX)}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX;
+        setPaused(true);
+      }}
       onTouchEnd={(e) => {
         const delta = e.changedTouches[0].clientX - touchStartX.current;
         if (delta > 40) go(-1);
         else if (delta < -40) go(1);
+        setPaused(false);
       }}
     >
       {banner.imageUrl && (
