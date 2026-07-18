@@ -66,11 +66,11 @@ export default function BannerCarousel() {
         </svg>
       </button>
 
-      <div className="relative flex max-w-[600px] flex-col gap-2.5 px-20 py-8 text-white">
+      <div className="relative flex max-w-[600px] flex-col gap-2.5 px-12 py-6 text-white sm:px-20 sm:py-8">
         <span className="text-[11px] font-bold uppercase tracking-wider opacity-85">
           {banner.label}
         </span>
-        <h2 className="font-display m-0 text-[26px] font-semibold tracking-tight">
+        <h2 className="font-display m-0 text-[20px] font-semibold tracking-tight sm:text-[26px]">
           {banner.title}
         </h2>
         <p className="m-0 text-sm opacity-90">{banner.subtitle}</p>

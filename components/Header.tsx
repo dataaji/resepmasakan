@@ -50,7 +50,7 @@ export default function Header() {
 
   return (
     <div
-      className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 backdrop-blur-md"
+      className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-3 backdrop-blur-md sm:px-5"
       style={{
         background: "var(--header-bg)",
         boxShadow: "0 1px 0 var(--header-border-color)",
@@ -77,8 +77,8 @@ export default function Header() {
       </Link>
 
       <nav
-        className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto rounded-2xl p-1"
-        style={{ background: "var(--nav-wrap)", maxWidth: 460, flexBasis: 300 }}
+        className="order-last flex w-full min-w-0 gap-0.5 overflow-x-auto rounded-2xl p-1 lg:order-none lg:w-auto lg:max-w-[460px] lg:flex-1"
+        style={{ background: "var(--nav-wrap)" }}
       >
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href;
@@ -86,7 +86,7 @@ export default function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="whitespace-nowrap rounded-xl px-4 py-2 text-[13px] font-semibold"
+              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-center text-[12.5px] font-semibold lg:flex-none lg:px-4 lg:text-[13px] lg:text-left"
               style={{
                 background: active ? "#FF5A36" : "transparent",
                 color: active ? "#fff" : "var(--ink)",

@@ -44,7 +44,7 @@ export default function MyRecipesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] px-8 pb-16 pt-7">
+    <div className="mx-auto max-w-[1200px] px-4 pb-16 pt-7 sm:px-8">
       <div className="mb-6.5 flex items-center justify-between">
         <div>
           <h1 className="font-display m-0 mb-1 text-[32px] text-ink">Resep Saya</h1>

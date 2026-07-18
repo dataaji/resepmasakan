@@ -28,7 +28,7 @@ const VALUES: { title: string; desc: string; path: string; bg: string; fg: strin
 
 export default function TentangPage() {
   return (
-    <div className="mx-auto max-w-[820px] px-8 pb-16 pt-10">
+    <div className="mx-auto max-w-[820px] px-4 pb-16 pt-10 sm:px-8">
       <div className="mb-10 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt="Kulinara" className="mx-auto mb-4 h-16 w-16" style={{ borderRadius: 14 }} />

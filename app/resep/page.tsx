@@ -149,7 +149,7 @@ function RecipeDetailContent() {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-8 pb-16 pt-6">
+    <div className="mx-auto max-w-[1100px] px-4 pb-16 pt-6 sm:px-8">
       <button
         type="button"
         onClick={() => router.back()}
@@ -211,7 +211,7 @@ function RecipeDetailContent() {
               "linear-gradient(to top, rgba(20,12,8,.88) 0%, rgba(20,12,8,.2) 55%, transparent 78%)",
           }}
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 px-8 py-7">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 px-5 py-6 sm:px-8 sm:py-7">
           <div className="flex gap-2.5">
             <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: "#FFFFFFE0", color: "#D94A24" }}>
               {recipe.category}
@@ -220,7 +220,7 @@ function RecipeDetailContent() {
               {recipe.difficulty}
             </span>
           </div>
-          <h1 className="font-display m-0 text-[34px] font-semibold tracking-tight text-white">
+          <h1 className="font-display m-0 text-[23px] font-semibold tracking-tight text-white sm:text-[34px]">
             {recipe.title}
           </h1>
           <p className="m-0 text-sm text-white/80">oleh {authorName({ profiles }, recipe.userId)}</p>
@@ -245,7 +245,7 @@ function RecipeDetailContent() {
         </div>
       )}
 
-      <div className="mb-5 grid gap-3.5" style={{ gridTemplateColumns: `repeat(${recipe.estimatedCost !== null ? 4 : 3},1fr)` }}>
+      <div className={`mb-5 grid grid-cols-2 gap-3 sm:gap-3.5 ${recipe.estimatedCost !== null ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <StatCard icon="clock" bg="#FFE1D6" fg="#D94A24" label="Waktu Masak" value={formatCookTime(recipe.cookTimeMinutes)} />
         <StatCard icon="users" bg="#DDF3F6" fg="#1D7A8C" label="Porsi" value={`${recipe.servings} orang`} />
         <StatCard icon="star" bg="#FFF3D1" fg="#A6740A" label="Rating" value={`${rating.toFixed(1)} / 5 (${ratingCount})`} />
@@ -366,7 +366,7 @@ function RecipeDetailContent() {
         </div>
       </div>
 
-      <div className="mb-7 grid gap-9" style={{ gridTemplateColumns: "1fr 1.4fr" }}>
+      <div className="mb-7 grid gap-6 md:gap-9 md:grid-cols-[1fr_1.4fr]">
         <div>
           <h2 className="font-display m-0 mb-3.5 text-[19px] text-ink">Bahan-Bahan</h2>
           <div className="flex flex-col gap-2.5">

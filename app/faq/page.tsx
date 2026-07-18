@@ -11,7 +11,7 @@ export default function FaqPage() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
-    <div className="mx-auto max-w-[720px] px-8 pb-16 pt-7">
+    <div className="mx-auto max-w-[720px] px-4 pb-16 pt-7 sm:px-8">
       <div className="mb-7">
         <h1 className="font-display m-0 mb-1 text-[32px] text-ink">FAQ & Kontak</h1>
         <p className="m-0 text-[15px] text-muted">Pertanyaan umum dan cara menghubungi kami</p>

@@ -85,7 +85,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] px-8 pb-16 pt-7">
+    <div className="mx-auto max-w-[1200px] px-4 pb-16 pt-7 sm:px-8">
       <div
         className="mb-8 rounded-xl4 border p-6"
         style={{ background: "var(--card)", borderColor: "var(--card-border)" }}

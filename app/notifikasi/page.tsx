@@ -81,7 +81,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[680px] px-8 pb-16 pt-7">
+    <div className="mx-auto max-w-[680px] px-4 pb-16 pt-7 sm:px-8">
       <div className="mb-6">
         <h1 className="font-display m-0 mb-1 text-[32px] text-ink">Notifikasi</h1>
         <p className="m-0 text-[15px] text-muted">Aktivitas terbaru di resep-resepmu</p>

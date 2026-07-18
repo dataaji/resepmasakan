@@ -202,7 +202,7 @@ export default function RecipeForm({
   const okBorder = { borderColor: "var(--input-border)" };
 
   return (
-    <div className="mx-auto max-w-[820px] px-8 pb-16 pt-7" ref={formTopRef}>
+    <div className="mx-auto max-w-[820px] px-4 pb-16 pt-7 sm:px-8" ref={formTopRef}>
       <h1 className="font-display m-0 mb-2 text-[28px] font-semibold text-ink">{headerLabel}</h1>
       {Object.keys(errors).length > 0 && (
         <p className="m-0 mb-5 rounded-lg px-3.5 py-2.5 text-sm font-semibold" style={{ background: "#FADADA", color: "#791F1F" }}>

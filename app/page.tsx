@@ -49,9 +49,9 @@ function HomeContent() {
   );
 
   return (
-    <div className="mx-auto max-w-[1400px] px-8 pb-16 pt-7">
+    <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-7 sm:px-8">
       <div className="mb-7 pt-1.5">
-        <h1 className="font-display m-0 mb-1.5 text-[38px] font-semibold tracking-tight text-ink">
+        <h1 className="font-display m-0 mb-1.5 text-[30px] font-semibold tracking-tight text-ink sm:text-[38px]">
           Jelajah Resep
         </h1>
         <p className="m-0 text-[15px] text-muted">
@@ -94,13 +94,13 @@ function HomeContent() {
             value={filters.ingredient}
             onChange={(e) => setFilters((f) => ({ ...f, ingredient: e.target.value }))}
             placeholder="Cari bahan (mis. ayam)"
-            className="w-[180px] rounded-full border-2 px-3.5 py-2 text-[13px]"
+            className="w-full rounded-full border-2 px-3.5 py-2 text-[13px] sm:w-[180px]"
             style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
           />
           <select
             value={filters.time}
             onChange={(e) => setFilters((f) => ({ ...f, time: e.target.value as HomeFilters["time"] }))}
-            className="rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold"
+            className="flex-1 rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold sm:flex-none"
             style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
           >
             <option value="Semua">Semua Waktu</option>
@@ -112,7 +112,7 @@ function HomeContent() {
           <select
             value={filters.difficulty}
             onChange={(e) => setFilters((f) => ({ ...f, difficulty: e.target.value as HomeFilters["difficulty"] }))}
-            className="rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold"
+            className="flex-1 rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold sm:flex-none"
             style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
           >
             <option value="Semua">Semua Tingkat</option>
@@ -123,7 +123,7 @@ function HomeContent() {
           <select
             value={filters.sort}
             onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as HomeFilters["sort"] }))}
-            className="ml-auto rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold"
+            className="w-full rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold sm:ml-auto sm:w-auto"
             style={{ borderColor: "#FF5A36", background: "#FFE1D6", color: "#D94A24" }}
           >
             <option value="rating">Rating Tertinggi</option>

@@ -45,7 +45,7 @@ export default function SavedPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] px-8 pb-16 pt-7">
+    <div className="mx-auto max-w-[1200px] px-4 pb-16 pt-7 sm:px-8">
       <div className="mb-6.5">
         <h1 className="font-display m-0 mb-1 text-[32px] text-ink">Koleksi</h1>
         <p className="m-0 text-[15px] text-muted">Resep yang kamu simpan</p>
