@@ -89,6 +89,7 @@ function RecipeDetailContent() {
   const [commentPhoto, setCommentPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const [portions, setPortions] = useState(1);
   const allRecipes = useAppStore((s) => s.recipes);
   const loadPublic = useAppStore((s) => s.loadPublic);
 
@@ -99,6 +100,10 @@ function RecipeDetailContent() {
   useEffect(() => {
     setMyStars(myRating?.stars ?? 0);
   }, [myRating?.stars]);
+
+  useEffect(() => {
+    if (recipe?.servings) setPortions(recipe.servings);
+  }, [recipe?.servings]);
 
   if (!detailLoaded && !recipe) {
     return (
@@ -122,6 +127,11 @@ function RecipeDetailContent() {
   const canInteract = !!profile;
   const isMine = profile?.id === recipe.userId;
   const diff = DIFF_COLORS[recipe.difficulty];
+
+  const baseServings = recipe.servings || 1;
+  const scale = portions / baseServings;
+  const isScaled = portions !== baseServings;
+  const fmtQty = (qty: number) => String(parseFloat((qty * scale).toFixed(2)));
 
   function requireLogin(action: () => void) {
     if (!profile) {
@@ -368,7 +378,52 @@ function RecipeDetailContent() {
 
       <div className="mb-7 grid gap-6 md:gap-9 md:grid-cols-[1fr_1.4fr]">
         <div>
-          <h2 className="font-display m-0 mb-3.5 text-[19px] text-ink">Bahan-Bahan</h2>
+          <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display m-0 text-[19px] text-ink">Bahan-Bahan</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-muted">Untuk</span>
+              <div
+                className="flex items-center gap-1 rounded-full border p-1"
+                style={{ borderColor: "var(--card-border)", background: "var(--card)" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setPortions((p) => Math.max(1, p - 1))}
+                  aria-label="Kurangi porsi"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border-none text-[16px] font-bold text-white disabled:opacity-40"
+                  style={{ background: "#FF5A36" }}
+                  disabled={portions <= 1}
+                >
+                  −
+                </button>
+                <span className="min-w-[62px] text-center text-[13px] font-bold text-ink">
+                  {portions} porsi
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPortions((p) => Math.min(99, p + 1))}
+                  aria-label="Tambah porsi"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border-none text-[16px] font-bold text-white disabled:opacity-40"
+                  style={{ background: "#FF5A36" }}
+                  disabled={portions >= 99}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+          {isScaled && (
+            <p className="m-0 mb-2.5 text-xs text-muted2">
+              Takaran disesuaikan dari resep asli {baseServings} porsi.{" "}
+              <button
+                type="button"
+                onClick={() => setPortions(baseServings)}
+                className="border-none bg-transparent p-0 font-semibold text-[#D94A24]"
+              >
+                Reset
+              </button>
+            </p>
+          )}
           <div className="flex flex-col gap-2.5">
             {recipe.ingredients.map((ing) => (
               <div
@@ -377,12 +432,19 @@ function RecipeDetailContent() {
                 style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
               >
                 <span className="h-[7px] w-[7px] flex-none rounded-full" style={{ background: "#FF5A36" }} />
-                {ing.name}
-                {ing.secukupnya
-                  ? " — secukupnya"
-                  : ing.qty !== null
-                  ? ` — ${ing.qty} ${ing.unit ?? ""}`
-                  : ""}
+                <span>
+                  {ing.name}
+                  {ing.secukupnya
+                    ? " — secukupnya"
+                    : ing.qty !== null
+                    ? " — "
+                    : ""}
+                  {!ing.secukupnya && ing.qty !== null && (
+                    <span className="font-semibold" style={{ color: isScaled ? "#D94A24" : "inherit" }}>
+                      {fmtQty(ing.qty)} {ing.unit ?? ""}
+                    </span>
+                  )}
+                </span>
               </div>
             ))}
           </div>
