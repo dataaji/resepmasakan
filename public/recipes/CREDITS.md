@@ -45,4 +45,12 @@ Tambahan (batch 3 — untuk 50 resep):
 - nasi-pecel.jpg — "Nasi Pecel Surabaya.jpg"
 - es-jeruk.jpg — "Es jeruk peras.jpg"
 
+Tambahan (batch 4 — untuk 100 resep): ~56 foto hidangan Indonesia lain dari
+Wikimedia Commons (nasi liwet, ayam penyet, semur, sop buntut, tongseng, gulai,
+sate padang, mie aceh, pastel, combro, onde-onde, cilok, batagor, otak-otak,
+kerak telor, lemper, nastar, kastengel, putri salju, bika ambon, pie susu,
+es doger, es pisang ijo, teh tarik, es teler, urap, karedok, sayur lodeh,
+tahu/tempe bacem, kepiting/kerang/udang/cumi/pindang seafood, dll). Nama file =
+slug resep di supabase/upgrade5.sql.
+
 Sumber: commons.wikimedia.org. Sebelum dipakai untuk produksi/publik, cek ulang lisensi & atribusi tiap file di halaman deskripsinya masing-masing.
