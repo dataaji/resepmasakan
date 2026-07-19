@@ -10,13 +10,19 @@ export default function ChipGroup({
   options,
   selected,
   onSelect,
+  nowrap = false,
 }: {
   options: ChipOption[];
   selected: string;
   onSelect: (value: string) => void;
+  nowrap?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2.5">
+    <div
+      className={`flex items-center gap-2.5 ${
+        nowrap ? "overflow-x-auto pb-1" : "flex-wrap"
+      }`}
+    >
       {options.map((opt) => {
         const active = opt.value === selected;
         return (
@@ -24,7 +30,7 @@ export default function ChipGroup({
             key={opt.value}
             type="button"
             onClick={() => onSelect(opt.value)}
-            className="flex items-center gap-1.5 rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold transition-colors"
+            className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3.5 py-2 text-[13px] font-semibold transition-colors"
             style={{
               borderColor: active ? "#FF5A36" : "var(--input-border)",
               background: active ? "#FFE1D6" : "var(--card)",
