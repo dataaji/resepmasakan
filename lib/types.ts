@@ -37,6 +37,7 @@ export interface Profile {
   avatarUrl: string | null;
   role: UserRole;
   status: UserStatus;
+  createdAt: number;
 }
 
 export interface Ingredient {

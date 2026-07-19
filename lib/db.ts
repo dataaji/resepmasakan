@@ -33,6 +33,7 @@ export function rowToProfile(row: any): Profile {
     avatarUrl: row.avatar_url ?? null,
     role: row.role as UserRole,
     status: row.status as UserStatus,
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : 0,
   };
 }
 

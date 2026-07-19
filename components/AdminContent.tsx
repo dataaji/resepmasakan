@@ -5,31 +5,115 @@ import { useAppStore } from "@/lib/store";
 import { BannerItem, PopularSearch, CategoryItem } from "@/lib/types";
 import ImageUpload from "@/components/ImageUpload";
 
-/* ---------------- Statistik ringkas ---------------- */
+/* ---------------- Statistik ---------------- */
 
-export function AdminStats() {
+function periodStarts() {
+  const dayMs = 86400000;
+  const now = Date.now();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  return {
+    today: todayStart.getTime(),
+    week: now - 7 * dayMs,
+    month: now - 30 * dayMs,
+  };
+}
+
+function countSince<T extends { createdAt: number }>(arr: T[], since: number) {
+  return arr.filter((x) => x.createdAt >= since).length;
+}
+
+export function StatsDashboard() {
   const recipes = useAppStore((s) => s.recipes);
   const profiles = useAppStore((s) => s.profiles);
   const comments = useAppStore((s) => s.comments);
   const banners = useAppStore((s) => s.banners);
+  const visitStats = useAppStore((s) => s.visitStats);
+
+  const p = periodStarts();
 
   const tiles = [
     { label: "Total Resep", value: recipes.length, bg: "#FFE1D6", fg: "#D94A24" },
-    { label: "Pengguna", value: profiles.length, bg: "#DDF3F6", fg: "#1D7A8C" },
-    { label: "Komentar", value: comments.length, bg: "#EEEDFE", fg: "#3C3489" },
+    { label: "Total Pengguna", value: profiles.length, bg: "#DDF3F6", fg: "#1D7A8C" },
+    { label: "Total Komentar", value: comments.length, bg: "#EEEDFE", fg: "#3C3489" },
     { label: "Banner Aktif", value: banners.filter((b) => b.isActive).length, bg: "#E1F5E4", fg: "#1F8A3B" },
   ];
 
+  const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
+
+  const rows: { label: string; today: string; week: string; month: string; total: string }[] = [
+    {
+      label: "Pengunjung",
+      today: fmt(visitStats?.today),
+      week: fmt(visitStats?.week),
+      month: fmt(visitStats?.month),
+      total: fmt(visitStats?.total),
+    },
+    {
+      label: "Resep baru",
+      today: fmt(countSince(recipes, p.today)),
+      week: fmt(countSince(recipes, p.week)),
+      month: fmt(countSince(recipes, p.month)),
+      total: fmt(recipes.length),
+    },
+    {
+      label: "Akun baru",
+      today: fmt(countSince(profiles, p.today)),
+      week: fmt(countSince(profiles, p.week)),
+      month: fmt(countSince(profiles, p.month)),
+      total: fmt(profiles.length),
+    },
+    {
+      label: "Komentar baru",
+      today: fmt(countSince(comments, p.today)),
+      week: fmt(countSince(comments, p.week)),
+      month: fmt(countSince(comments, p.month)),
+      total: fmt(comments.length),
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {tiles.map((t) => (
-        <div key={t.label} className="rounded-2xl border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-          <div className="mb-1.5 inline-flex rounded-lg px-2 py-0.5 text-[11px] font-bold" style={{ background: t.bg, color: t.fg }}>
-            {t.label}
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-2xl border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+            <div className="mb-1.5 inline-flex rounded-lg px-2 py-0.5 text-[11px] font-bold" style={{ background: t.bg, color: t.fg }}>
+              {t.label}
+            </div>
+            <p className="m-0 text-[26px] font-bold text-ink">{t.value}</p>
           </div>
-          <p className="m-0 text-[26px] font-bold text-ink">{t.value}</p>
-        </div>
-      ))}
+        ))}
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr style={{ color: "var(--muted2)" }}>
+              <th className="px-4 py-3 text-left text-[12px] font-bold uppercase tracking-wide">Metrik</th>
+              <th className="px-3 py-3 text-right text-[12px] font-bold uppercase tracking-wide">Hari ini</th>
+              <th className="px-3 py-3 text-right text-[12px] font-bold uppercase tracking-wide">7 Hari</th>
+              <th className="px-3 py-3 text-right text-[12px] font-bold uppercase tracking-wide">30 Hari</th>
+              <th className="px-4 py-3 text-right text-[12px] font-bold uppercase tracking-wide">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.label} style={{ borderTop: "1px solid var(--card-border)" }}>
+                <td className="px-4 py-3 font-semibold text-ink">{r.label}</td>
+                <td className="px-3 py-3 text-right font-bold text-ink">{r.today}</td>
+                <td className="px-3 py-3 text-right text-ink">{r.week}</td>
+                <td className="px-3 py-3 text-right text-ink">{r.month}</td>
+                <td className="px-4 py-3 text-right font-bold" style={{ color: "#D94A24" }}>{r.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {!visitStats && (
+        <p className="m-0 text-xs text-muted2">
+          Data pengunjung akan terisi setelah upgrade4.sql dijalankan dan mulai ada kunjungan baru.
+        </p>
+      )}
     </div>
   );
 }

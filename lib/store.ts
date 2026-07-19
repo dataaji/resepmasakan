@@ -177,6 +177,10 @@ interface AppState {
   deletePopularSearch: (id: string) => Promise<void>;
   saveCategory: (input: CategoryInput) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+
+  visitStats: { today: number; week: number; month: number; total: number } | null;
+  logVisit: () => Promise<void>;
+  loadStats: () => Promise<void>;
 }
 
 let authInitialized = false;
@@ -220,6 +224,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   popularSearches: DEFAULT_POPULAR,
   categories: DEFAULT_CATEGORIES,
   siteContentLoaded: false,
+  visitStats: null,
 
   confirmRequest: null,
   toasts: [],
@@ -944,5 +949,43 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
     await get().loadSiteContent();
     get().showToast("Kategori dihapus");
+  },
+
+  // ---------- Statistik ----------
+
+  logVisit: async () => {
+    if (typeof window === "undefined") return;
+    try {
+      if (window.sessionStorage.getItem("kulinara-visit-logged")) return;
+      window.sessionStorage.setItem("kulinara-visit-logged", "1");
+      await supabase.from("visits").insert({});
+    } catch {
+      // tabel visits belum ada (upgrade4.sql belum dijalankan) — abaikan.
+    }
+  },
+
+  loadStats: async () => {
+    const dayMs = 86400000;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const now = Date.now();
+    const windows = [
+      todayStart.toISOString(),
+      new Date(now - 7 * dayMs).toISOString(),
+      new Date(now - 30 * dayMs).toISOString(),
+      null,
+    ];
+    const countSince = async (iso: string | null): Promise<number | null> => {
+      let q = supabase.from("visits").select("*", { count: "exact", head: true });
+      if (iso) q = q.gte("created_at", iso);
+      const { count, error } = await q;
+      return error ? null : count ?? 0;
+    };
+    const [today, week, month, total] = await Promise.all(windows.map(countSince));
+    if (today === null) {
+      set({ visitStats: null });
+      return;
+    }
+    set({ visitStats: { today, week: week ?? 0, month: month ?? 0, total: total ?? 0 } });
   },
 }));

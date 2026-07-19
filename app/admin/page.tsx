@@ -7,7 +7,7 @@ import { authorName } from "@/lib/selectors";
 import RecipePhoto from "@/components/RecipePhoto";
 import EmptyState from "@/components/EmptyState";
 import {
-  AdminStats,
+  StatsDashboard,
   BannerManager,
   PopularManager,
   CategoryManager,
@@ -36,6 +36,7 @@ export default function AdminPage() {
   const setUserRole = useAppStore((s) => s.setUserRole);
   const askConfirm = useAppStore((s) => s.askConfirm);
   const loadSiteContent = useAppStore((s) => s.loadSiteContent);
+  const loadStats = useAppStore((s) => s.loadStats);
 
   const [loaded, setLoaded] = useState(false);
 
@@ -47,10 +48,11 @@ export default function AdminPage() {
         router.replace("/");
       } else {
         loadSiteContent();
+        loadStats();
         loadAdmin().finally(() => setLoaded(true));
       }
     }
-  }, [authLoading, profile, router, loadAdmin, loadSiteContent]);
+  }, [authLoading, profile, router, loadAdmin, loadSiteContent, loadStats]);
 
   if (authLoading || !profile || profile.role !== "admin") return null;
 
@@ -75,7 +77,7 @@ export default function AdminPage() {
       </div>
 
       <div className="mb-8">
-        <AdminStats />
+        <StatsDashboard />
       </div>
 
       <Section title="Kelola Banner">
@@ -94,7 +96,7 @@ export default function AdminPage() {
         <EmptyState text="Memuat data moderasi..." />
       ) : (
         <>
-          <Section title="Laporan Resep">
+          <Section title="Laporan Resep" count={pendingRecipeReports.length} defaultOpen={pendingRecipeReports.length > 0}>
             {pendingRecipeReports.length === 0 ? (
               <EmptyState text="Tidak ada laporan resep yang menunggu." />
             ) : (
@@ -126,7 +128,7 @@ export default function AdminPage() {
             )}
           </Section>
 
-          <Section title="Laporan Komentar">
+          <Section title="Laporan Komentar" count={pendingCommentReports.length} defaultOpen={pendingCommentReports.length > 0}>
             {pendingCommentReports.length === 0 ? (
               <EmptyState text="Tidak ada laporan komentar yang menunggu." />
             ) : (
@@ -157,7 +159,7 @@ export default function AdminPage() {
             )}
           </Section>
 
-          <Section title="Manajemen Pengguna">
+          <Section title="Manajemen Pengguna" count={users.length}>
             <div className="flex flex-col gap-2.5">
               {users.map((u) => (
                 <div key={u.id} className="flex flex-wrap items-center gap-3.5 rounded-2xl border p-3.5" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
@@ -244,11 +246,51 @@ export default function AdminPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  count,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="mb-8">
-      <h2 className="font-display m-0 mb-3.5 text-lg text-ink">{title}</h2>
-      {children}
+    <div
+      className="mb-3 overflow-hidden rounded-2xl border"
+      style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-3 border-none bg-transparent px-4 py-3.5 text-left"
+      >
+        <span className="flex items-center gap-2">
+          <span className="font-display text-lg text-ink">{title}</span>
+          {count !== undefined && (
+            <span
+              className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+              style={{ background: "var(--nav-wrap)", color: "var(--muted)" }}
+            >
+              {count}
+            </span>
+          )}
+        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--muted)"
+          strokeWidth={2.5}
+          className="transition-transform"
+          style={{ width: 18, height: 18, transform: open ? "rotate(180deg)" : "none" }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
     </div>
   );
 }
