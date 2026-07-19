@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { filterAndSortHome, HomeFilters } from "@/lib/selectors";
-import ChipGroup from "@/components/ChipGroup";
+import CategoryDropdown from "@/components/CategoryDropdown";
 import BannerCarousel from "@/components/BannerCarousel";
 import RecipeCard from "@/components/RecipeCard";
 import EmptyState from "@/components/EmptyState";
@@ -105,18 +105,13 @@ function HomeContent() {
         />
       </div>
 
-      {/* Kategori — satu baris rapi, bisa digeser */}
-      <div className="mb-3">
-        <ChipGroup
-          nowrap
+      {/* Kategori (dropdown) + filter tambahan + urutan */}
+      <div className="mb-7 flex flex-wrap items-center gap-2.5">
+        <CategoryDropdown
           options={categoryOptions}
           selected={filters.category}
           onSelect={(v) => setFilters((f) => ({ ...f, category: v as HomeFilters["category"] }))}
         />
-      </div>
-
-      {/* Filter tambahan + urutan */}
-      <div className="mb-7 flex flex-wrap items-center gap-2.5">
         <input
           value={filters.ingredient}
           onChange={(e) => setFilters((f) => ({ ...f, ingredient: e.target.value }))}
