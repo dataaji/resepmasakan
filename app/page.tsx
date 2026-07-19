@@ -41,6 +41,23 @@ function HomeContent() {
     loadPublic();
   }, [loadPublic]);
 
+  // Klik "Beranda"/logo saat sudah di halaman ini akan mengosongkan filter.
+  useEffect(() => {
+    const reset = () => {
+      setFilters({
+        search: "",
+        category: "Semua",
+        ingredient: "",
+        time: "Semua",
+        difficulty: "Semua",
+        sort: "rating",
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("kulinara:home-reset", reset);
+    return () => window.removeEventListener("kulinara:home-reset", reset);
+  }, []);
+
   const list = useAppStore((s) => filterAndSortHome(s, filters));
 
   const resultsLabel = useMemo(

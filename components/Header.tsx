@@ -58,6 +58,9 @@ export default function Header() {
     >
       <Link
         href="/"
+        onClick={() => {
+          if (pathname === "/") window.dispatchEvent(new Event("kulinara:home-reset"));
+        }}
         className="flex flex-none items-center gap-2.5"
         style={{ color: "inherit" }}
       >
@@ -86,6 +89,10 @@ export default function Header() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => {
+                if (item.href === "/" && pathname === "/")
+                  window.dispatchEvent(new Event("kulinara:home-reset"));
+              }}
               className="flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-center text-[12.5px] font-semibold lg:flex-none lg:px-4 lg:text-[13px] lg:text-left"
               style={{
                 background: active ? "#FF5A36" : "transparent",
