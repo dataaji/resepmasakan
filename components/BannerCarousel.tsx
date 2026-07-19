@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BANNERS } from "@/lib/banners";
+import { useAppStore } from "@/lib/store";
 
 const AUTOPLAY_MS = 5000;
 
@@ -12,20 +12,27 @@ export default function BannerCarousel() {
   const router = useRouter();
   const touchStartX = useRef(0);
 
-  const banner = BANNERS[index];
+  const allBanners = useAppStore((s) => s.banners);
+  const banners = useMemo(
+    () => allBanners.filter((b) => b.isActive).sort((a, b) => a.sortOrder - b.sortOrder),
+    [allBanners]
+  );
 
   function go(delta: number) {
-    setIndex((i) => (i + delta + BANNERS.length) % BANNERS.length);
+    setIndex((i) => (i + delta + banners.length) % banners.length);
   }
 
   // Jalan otomatis; berhenti saat kursor pengunjung ada di atas banner.
   useEffect(() => {
-    if (paused || BANNERS.length <= 1) return;
+    if (paused || banners.length <= 1) return;
     const id = setInterval(() => {
-      setIndex((i) => (i + 1) % BANNERS.length);
+      setIndex((i) => (i + 1) % banners.length);
     }, AUTOPLAY_MS);
     return () => clearInterval(id);
-  }, [paused]);
+  }, [paused, banners.length]);
+
+  if (banners.length === 0) return null;
+  const banner = banners[index] ?? banners[0];
 
   return (
     <div
@@ -103,7 +110,7 @@ export default function BannerCarousel() {
       </div>
 
       <div className="absolute bottom-3.5 left-0 right-0 flex justify-center gap-1.5">
-        {BANNERS.map((_, i) => (
+        {banners.map((_, i) => (
           <button
             key={i}
             type="button"

@@ -4,16 +4,10 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { filterAndSortHome, HomeFilters } from "@/lib/selectors";
-import { CATEGORIES, POPULAR_SEARCHES } from "@/lib/constants";
 import ChipGroup from "@/components/ChipGroup";
 import BannerCarousel from "@/components/BannerCarousel";
 import RecipeCard from "@/components/RecipeCard";
 import EmptyState from "@/components/EmptyState";
-
-const CATEGORY_OPTIONS = [
-  { value: "Semua", label: "Semua" },
-  ...CATEGORIES.map((c) => ({ value: c.value, label: c.value, dot: c.dot })),
-];
 
 export default function HomePage() {
   return (
@@ -27,6 +21,18 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const loadPublic = useAppStore((s) => s.loadPublic);
   const publicLoaded = useAppStore((s) => s.publicLoaded);
+  const categories = useAppStore((s) => s.categories);
+  const popularSearches = useAppStore((s) => s.popularSearches);
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: "Semua", label: "Semua" },
+      ...[...categories]
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((c) => ({ value: c.name, label: c.name, dot: c.dot })),
+    ],
+    [categories]
+  );
 
   const [filters, setFilters] = useState<HomeFilters>({
     search: "",
@@ -103,7 +109,7 @@ function HomeContent() {
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <ChipGroup
-            options={CATEGORY_OPTIONS}
+            options={categoryOptions}
             selected={filters.category}
             onSelect={(v) => setFilters((f) => ({ ...f, category: v as HomeFilters["category"] }))}
           />
@@ -158,20 +164,27 @@ function HomeContent() {
           Pencarian Populer
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {POPULAR_SEARCHES.map((s) => (
+          {[...popularSearches]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((s) => (
             <button
-              key={s.label}
+              key={s.id}
               type="button"
               onClick={() => setFilters((f) => ({ ...f, search: s.label, category: "Semua" }))}
               className="group relative h-[104px] overflow-hidden rounded-xl2 border text-left"
-              style={{ borderColor: "var(--card-border)" }}
+              style={{
+                borderColor: "var(--card-border)",
+                background: "linear-gradient(135deg,#FF5A36,#FFC93C)",
+              }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={s.image}
-                alt={s.label}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
+              {s.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={s.imageUrl}
+                  alt={s.label}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              )}
               <div
                 className="absolute inset-0"
                 style={{

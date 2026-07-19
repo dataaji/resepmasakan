@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, DIFFICULTIES, UNIT_GROUPS } from "@/lib/constants";
+import { DIFFICULTIES, UNIT_GROUPS } from "@/lib/constants";
+import { useAppStore } from "@/lib/store";
 import { Category, Difficulty, Recipe, RecipeInput } from "@/lib/types";
 import ChipGroup from "@/components/ChipGroup";
 import { fileToCompressedDataUrl } from "@/lib/utils";
@@ -10,7 +11,6 @@ import { fileToCompressedDataUrl } from "@/lib/utils";
 const CUSTOM_UNIT = "__custom__";
 const CUSTOM_CATEGORY = "__custom_cat__";
 const KNOWN_UNITS = UNIT_GROUPS.flatMap((g) => g.units);
-const KNOWN_CATEGORIES = CATEGORIES.map((c) => c.value);
 
 interface IngredientRow {
   key: string;
@@ -81,7 +81,17 @@ export default function RecipeForm({
 }) {
   const router = useRouter();
 
-  const initialIsCustomCat = !!initial && !KNOWN_CATEGORIES.includes(initial.category);
+  const storeCategories = useAppStore((s) => s.categories);
+  const sortedCategories = useMemo(
+    () => [...storeCategories].sort((a, b) => a.sortOrder - b.sortOrder),
+    [storeCategories]
+  );
+  const knownCategories = useMemo(
+    () => sortedCategories.map((c) => c.name),
+    [sortedCategories]
+  );
+
+  const initialIsCustomCat = !!initial && !knownCategories.includes(initial.category);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [photos, setPhotos] = useState<string[]>(toPhotos(initial));
   const [categoryChoice, setCategoryChoice] = useState<string>(
@@ -271,7 +281,7 @@ export default function RecipeForm({
       <Field label="Kategori" error={errors.category}>
         <ChipGroup
           options={[
-            ...CATEGORIES.map((c) => ({ value: c.value, label: c.value, dot: c.dot })),
+            ...sortedCategories.map((c) => ({ value: c.name, label: c.name, dot: c.dot })),
             { value: CUSTOM_CATEGORY, label: "Lainnya..." },
           ]}
           selected={categoryChoice}

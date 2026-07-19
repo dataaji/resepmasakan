@@ -13,6 +13,9 @@ import {
   AppNotification,
   NotificationType,
   UserRole,
+  BannerItem,
+  PopularSearch,
+  CategoryItem,
 } from "./types";
 import {
   rowToProfile,
@@ -24,11 +27,64 @@ import {
   rowToRecipeReport,
   rowToCommentReport,
   rowToNotification,
+  rowToBanner,
+  rowToPopularSearch,
+  rowToCategoryItem,
   recipeInputToRow,
   upsertById,
   upsertByPair,
 } from "./db";
 import { uid } from "./utils";
+import { BANNERS } from "./banners";
+import { CATEGORIES, POPULAR_SEARCHES } from "./constants";
+
+const DEFAULT_BANNERS: BannerItem[] = BANNERS.map((b, i) => ({
+  id: `default-b${i}`,
+  ...b,
+  sortOrder: i,
+  isActive: true,
+}));
+
+const DEFAULT_POPULAR: PopularSearch[] = POPULAR_SEARCHES.map((p, i) => ({
+  id: `default-p${i}`,
+  label: p.label,
+  imageUrl: p.image,
+  sortOrder: i,
+}));
+
+const DEFAULT_CATEGORIES: CategoryItem[] = CATEGORIES.map((c, i) => ({
+  id: `default-c${i}`,
+  name: c.value,
+  dot: c.dot,
+  sortOrder: i,
+}));
+
+export interface BannerInput {
+  id?: string;
+  label: string;
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  gradient: string;
+  href: string;
+  sortOrder: number;
+  isActive: boolean;
+  image: string | null;
+}
+
+export interface PopularInput {
+  id?: string;
+  label: string;
+  sortOrder: number;
+  image: string | null;
+}
+
+export interface CategoryInput {
+  id?: string;
+  name: string;
+  dot: string;
+  sortOrder: number;
+}
 
 export interface ConfirmRequest {
   title: string;
@@ -108,6 +164,19 @@ interface AppState {
   resolveCommentReport: (reportId: string, action: "ignore" | "delete") => Promise<void>;
   suspendUser: (userId: string) => Promise<void>;
   banUser: (userId: string) => Promise<void>;
+
+  banners: BannerItem[];
+  popularSearches: PopularSearch[];
+  categories: CategoryItem[];
+  siteContentLoaded: boolean;
+
+  loadSiteContent: () => Promise<void>;
+  saveBanner: (input: BannerInput) => Promise<void>;
+  deleteBanner: (id: string) => Promise<void>;
+  savePopularSearch: (input: PopularInput) => Promise<void>;
+  deletePopularSearch: (id: string) => Promise<void>;
+  saveCategory: (input: CategoryInput) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
 let authInitialized = false;
@@ -146,6 +215,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   publicLoaded: false,
   myReportedRecipeIds: [],
   myReportedCommentIds: [],
+
+  banners: DEFAULT_BANNERS,
+  popularSearches: DEFAULT_POPULAR,
+  categories: DEFAULT_CATEGORIES,
+  siteContentLoaded: false,
 
   confirmRequest: null,
   toasts: [],
@@ -758,5 +832,117 @@ export const useAppStore = create<AppState>()((set, get) => ({
         p.id === userId ? { ...p, status: "banned" as const } : p
       ),
     }));
+  },
+
+  // ---------- Konten situs (banner, pencarian populer, kategori) ----------
+
+  loadSiteContent: async () => {
+    const [bRes, pRes, cRes] = await Promise.all([
+      supabase.from("banners").select("*").order("sort_order", { ascending: true }),
+      supabase.from("popular_searches").select("*").order("sort_order", { ascending: true }),
+      supabase.from("categories").select("*").order("sort_order", { ascending: true }),
+    ]);
+    set((s) => ({
+      banners: bRes.data && bRes.data.length ? bRes.data.map(rowToBanner) : s.banners,
+      popularSearches:
+        pRes.data && pRes.data.length ? pRes.data.map(rowToPopularSearch) : s.popularSearches,
+      categories: cRes.data && cRes.data.length ? cRes.data.map(rowToCategoryItem) : s.categories,
+      siteContentLoaded: true,
+    }));
+  },
+
+  saveBanner: async (input) => {
+    const imageUrl =
+      input.image && input.image.startsWith("data:")
+        ? await get().uploadPhotoFromDataUrl(input.image)
+        : input.image ?? null;
+    const row = {
+      label: input.label,
+      title: input.title,
+      subtitle: input.subtitle,
+      cta_label: input.ctaLabel,
+      gradient: input.gradient,
+      image_url: imageUrl,
+      href: input.href,
+      sort_order: input.sortOrder,
+      is_active: input.isActive,
+    };
+    const isExisting = input.id && !input.id.startsWith("default-");
+    const { error } = isExisting
+      ? await supabase.from("banners").update(row).eq("id", input.id!)
+      : await supabase.from("banners").insert(row);
+    if (error) {
+      get().showToast("Gagal menyimpan. Sudah jalankan upgrade3.sql?", "error");
+      return;
+    }
+    await get().loadSiteContent();
+    get().showToast("Banner disimpan");
+  },
+
+  deleteBanner: async (id) => {
+    const { error } = await supabase.from("banners").delete().eq("id", id);
+    if (error) {
+      get().showToast("Gagal menghapus banner", "error");
+      return;
+    }
+    await get().loadSiteContent();
+    get().showToast("Banner dihapus");
+  },
+
+  savePopularSearch: async (input) => {
+    const imageUrl =
+      input.image && input.image.startsWith("data:")
+        ? await get().uploadPhotoFromDataUrl(input.image)
+        : input.image ?? null;
+    const row = { label: input.label, image_url: imageUrl, sort_order: input.sortOrder };
+    const isExisting = input.id && !input.id.startsWith("default-");
+    const { error } = isExisting
+      ? await supabase.from("popular_searches").update(row).eq("id", input.id!)
+      : await supabase.from("popular_searches").insert(row);
+    if (error) {
+      get().showToast("Gagal menyimpan. Sudah jalankan upgrade3.sql?", "error");
+      return;
+    }
+    await get().loadSiteContent();
+    get().showToast("Pencarian populer disimpan");
+  },
+
+  deletePopularSearch: async (id) => {
+    const { error } = await supabase.from("popular_searches").delete().eq("id", id);
+    if (error) {
+      get().showToast("Gagal menghapus", "error");
+      return;
+    }
+    await get().loadSiteContent();
+    get().showToast("Item dihapus");
+  },
+
+  saveCategory: async (input) => {
+    const row = { name: input.name.trim(), dot: input.dot, sort_order: input.sortOrder };
+    const isExisting = input.id && !input.id.startsWith("default-");
+    const { error } = isExisting
+      ? await supabase.from("categories").update(row).eq("id", input.id!)
+      : await supabase.from("categories").insert(row);
+    if (error) {
+      get().showToast(
+        error.code === "23505"
+          ? "Nama kategori sudah ada"
+          : "Gagal menyimpan. Sudah jalankan upgrade3.sql?",
+        "error"
+      );
+      return;
+    }
+    await get().loadSiteContent();
+    get().showToast("Kategori disimpan");
+  },
+
+  deleteCategory: async (id) => {
+    const { error } = await supabase.from("categories").delete().eq("id", id);
+    if (error) {
+      get().showToast("Gagal menghapus kategori", "error");
+      return;
+    }
+    await get().loadSiteContent();
+    get().showToast("Kategori dihapus");
   },
 }));

@@ -1,5 +1,32 @@
 export type Category = string;
 export type Difficulty = "Mudah" | "Sedang" | "Sulit";
+
+export interface BannerItem {
+  id: string;
+  label: string;
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  gradient: string;
+  imageUrl: string | null;
+  href: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface PopularSearch {
+  id: string;
+  label: string;
+  imageUrl: string | null;
+  sortOrder: number;
+}
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  dot: string;
+  sortOrder: number;
+}
 export type UserRole = "user" | "admin" | "super_admin";
 export type UserStatus = "active" | "suspended" | "banned";
 export type ReportStatus = "pending" | "resolved";

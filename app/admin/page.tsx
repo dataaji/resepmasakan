@@ -6,6 +6,12 @@ import { useAppStore } from "@/lib/store";
 import { authorName } from "@/lib/selectors";
 import RecipePhoto from "@/components/RecipePhoto";
 import EmptyState from "@/components/EmptyState";
+import {
+  AdminStats,
+  BannerManager,
+  PopularManager,
+  CategoryManager,
+} from "@/components/AdminContent";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -29,6 +35,7 @@ export default function AdminPage() {
   const banUser = useAppStore((s) => s.banUser);
   const setUserRole = useAppStore((s) => s.setUserRole);
   const askConfirm = useAppStore((s) => s.askConfirm);
+  const loadSiteContent = useAppStore((s) => s.loadSiteContent);
 
   const [loaded, setLoaded] = useState(false);
 
@@ -39,10 +46,11 @@ export default function AdminPage() {
       } else if (profile.role !== "admin") {
         router.replace("/");
       } else {
+        loadSiteContent();
         loadAdmin().finally(() => setLoaded(true));
       }
     }
-  }, [authLoading, profile, router, loadAdmin]);
+  }, [authLoading, profile, router, loadAdmin, loadSiteContent]);
 
   if (authLoading || !profile || profile.role !== "admin") return null;
 
@@ -65,6 +73,22 @@ export default function AdminPage() {
         <h1 className="font-display m-0 mb-1 text-[32px] text-ink">Panel Admin</h1>
         <p className="m-0 text-[15px] text-muted">Moderasi konten dan kelola pengguna Kulinara</p>
       </div>
+
+      <div className="mb-8">
+        <AdminStats />
+      </div>
+
+      <Section title="Kelola Banner">
+        <BannerManager />
+      </Section>
+
+      <Section title="Kelola Pencarian Populer">
+        <PopularManager />
+      </Section>
+
+      <Section title="Kelola Kategori">
+        <CategoryManager />
+      </Section>
 
       {!loaded ? (
         <EmptyState text="Memuat data moderasi..." />

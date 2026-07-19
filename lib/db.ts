@@ -14,6 +14,9 @@ import {
   UserRole,
   UserStatus,
   ReportStatus,
+  BannerItem,
+  PopularSearch,
+  CategoryItem,
 } from "./types";
 import { uid } from "./utils";
 
@@ -183,6 +186,39 @@ export function recipeInputToRow(
     })),
     steps: input.steps.map((s) => ({ text: s.text, photos: s.photos })),
     is_public: input.isPublic,
+  };
+}
+
+export function rowToBanner(row: any): BannerItem {
+  return {
+    id: row.id,
+    label: row.label ?? "",
+    title: row.title ?? "",
+    subtitle: row.subtitle ?? "",
+    ctaLabel: row.cta_label ?? "Lihat Resep",
+    gradient: row.gradient ?? "linear-gradient(120deg,#D94A24,#FF5A36)",
+    imageUrl: row.image_url ?? null,
+    href: row.href ?? "/",
+    sortOrder: row.sort_order ?? 0,
+    isActive: row.is_active !== false,
+  };
+}
+
+export function rowToPopularSearch(row: any): PopularSearch {
+  return {
+    id: row.id,
+    label: row.label ?? "",
+    imageUrl: row.image_url ?? null,
+    sortOrder: row.sort_order ?? 0,
+  };
+}
+
+export function rowToCategoryItem(row: any): CategoryItem {
+  return {
+    id: row.id,
+    name: row.name ?? "",
+    dot: row.dot ?? "#FF5A36",
+    sortOrder: row.sort_order ?? 0,
   };
 }
 
