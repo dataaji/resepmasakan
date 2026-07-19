@@ -7,20 +7,65 @@ import ImageUpload from "@/components/ImageUpload";
 
 /* ---------------- Statistik ---------------- */
 
-function periodStarts() {
+const CHART_DAYS = 14;
+const ACCENT = "#FF5A36";
+
+function dailyBuckets(times: number[], days: number) {
   const dayMs = 86400000;
-  const now = Date.now();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  return {
-    today: todayStart.getTime(),
-    week: now - 7 * dayMs,
-    month: now - 30 * dayMs,
-  };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = today.getTime() - (days - 1) * dayMs;
+  const buckets = Array.from({ length: days }, (_, i) => ({ start: start + i * dayMs, count: 0 }));
+  for (const t of times) {
+    if (t < start) continue;
+    const idx = Math.floor((t - start) / dayMs);
+    if (idx >= 0 && idx < days) buckets[idx].count++;
+  }
+  return buckets;
 }
 
-function countSince<T extends { createdAt: number }>(arr: T[], since: number) {
-  return arr.filter((x) => x.createdAt >= since).length;
+function countSince(times: number[], since: number) {
+  return times.filter((t) => t >= since).length;
+}
+
+function BarChart({ times, empty }: { times: number[]; empty?: boolean }) {
+  const buckets = dailyBuckets(times, CHART_DAYS);
+  const max = Math.max(1, ...buckets.map((b) => b.count));
+  return (
+    <div>
+      <div className="mb-1 text-[11px] font-semibold text-muted2">maks {max}/hari</div>
+      <div className="flex h-[150px] items-end gap-[3px]">
+        {buckets.map((b, i) => {
+          const d = new Date(b.start);
+          const pct = empty ? 0 : (b.count / max) * 100;
+          return (
+            <div key={i} className="group relative flex flex-1 flex-col justify-end" style={{ height: "100%" }}>
+              <div
+                className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-semibold text-white group-hover:block"
+                style={{ background: "var(--ink)" }}
+              >
+                {b.count} · {d.getDate()}/{d.getMonth() + 1}
+              </div>
+              <div
+                className="w-full rounded-t-[4px] transition-opacity group-hover:opacity-80"
+                style={{
+                  height: `${Math.max(pct, b.count > 0 ? 4 : 1.5)}%`,
+                  background: b.count > 0 ? ACCENT : "var(--card-border)",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex gap-[3px]">
+        {buckets.map((b, i) => (
+          <span key={i} className="flex-1 text-center text-[9px] text-muted2">
+            {new Date(b.start).getDate()}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function StatsDashboard() {
@@ -30,7 +75,7 @@ export function StatsDashboard() {
   const banners = useAppStore((s) => s.banners);
   const visitStats = useAppStore((s) => s.visitStats);
 
-  const p = periodStarts();
+  const [active, setActive] = useState(0);
 
   const tiles = [
     { label: "Total Resep", value: recipes.length, bg: "#FFE1D6", fg: "#D94A24" },
@@ -39,37 +84,26 @@ export function StatsDashboard() {
     { label: "Banner Aktif", value: banners.filter((b) => b.isActive).length, bg: "#E1F5E4", fg: "#1F8A3B" },
   ];
 
-  const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(n));
+  const metrics = useMemo(
+    () => [
+      { label: "Pengunjung", times: visitStats?.times ?? [], total: visitStats?.total ?? null, available: !!visitStats },
+      { label: "Resep baru", times: recipes.map((r) => r.createdAt), total: recipes.length, available: true },
+      { label: "Akun baru", times: profiles.map((pf) => pf.createdAt), total: profiles.length, available: true },
+      { label: "Komentar baru", times: comments.map((c) => c.createdAt), total: comments.length, available: true },
+    ],
+    [visitStats, recipes, profiles, comments]
+  );
 
-  const rows: { label: string; today: string; week: string; month: string; total: string }[] = [
-    {
-      label: "Pengunjung",
-      today: fmt(visitStats?.today),
-      week: fmt(visitStats?.week),
-      month: fmt(visitStats?.month),
-      total: fmt(visitStats?.total),
-    },
-    {
-      label: "Resep baru",
-      today: fmt(countSince(recipes, p.today)),
-      week: fmt(countSince(recipes, p.week)),
-      month: fmt(countSince(recipes, p.month)),
-      total: fmt(recipes.length),
-    },
-    {
-      label: "Akun baru",
-      today: fmt(countSince(profiles, p.today)),
-      week: fmt(countSince(profiles, p.week)),
-      month: fmt(countSince(profiles, p.month)),
-      total: fmt(profiles.length),
-    },
-    {
-      label: "Komentar baru",
-      today: fmt(countSince(comments, p.today)),
-      week: fmt(countSince(comments, p.week)),
-      month: fmt(countSince(comments, p.month)),
-      total: fmt(comments.length),
-    },
+  const m = metrics[active];
+  const dayMs = 86400000;
+  const now = Date.now();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const summary: { label: string; value: number | null }[] = [
+    { label: "Hari ini", value: countSince(m.times, todayStart.getTime()) },
+    { label: "7 Hari", value: countSince(m.times, now - 7 * dayMs) },
+    { label: "30 Hari", value: countSince(m.times, now - 30 * dayMs) },
+    { label: "Total", value: m.total },
   ];
 
   return (
@@ -85,35 +119,42 @@ export function StatsDashboard() {
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr style={{ color: "var(--muted2)" }}>
-              <th className="px-4 py-3 text-left text-[12px] font-bold uppercase tracking-wide">Metrik</th>
-              <th className="px-3 py-3 text-right text-[12px] font-bold uppercase tracking-wide">Hari ini</th>
-              <th className="px-3 py-3 text-right text-[12px] font-bold uppercase tracking-wide">7 Hari</th>
-              <th className="px-3 py-3 text-right text-[12px] font-bold uppercase tracking-wide">30 Hari</th>
-              <th className="px-4 py-3 text-right text-[12px] font-bold uppercase tracking-wide">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.label} style={{ borderTop: "1px solid var(--card-border)" }}>
-                <td className="px-4 py-3 font-semibold text-ink">{r.label}</td>
-                <td className="px-3 py-3 text-right font-bold text-ink">{r.today}</td>
-                <td className="px-3 py-3 text-right text-ink">{r.week}</td>
-                <td className="px-3 py-3 text-right text-ink">{r.month}</td>
-                <td className="px-4 py-3 text-right font-bold" style={{ color: "#D94A24" }}>{r.total}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="rounded-2xl border p-4 sm:p-5" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {metrics.map((mt, i) => (
+            <button
+              key={mt.label}
+              type="button"
+              onClick={() => setActive(i)}
+              className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold"
+              style={
+                i === active
+                  ? { background: ACCENT, color: "#fff" }
+                  : { background: "var(--nav-wrap)", color: "var(--muted)" }
+              }
+            >
+              {mt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1">
+          {summary.map((s) => (
+            <span key={s.label} className="text-[13px] text-muted">
+              {s.label}: <b className="text-ink">{s.value === null ? "—" : s.value}</b>
+            </span>
+          ))}
+        </div>
+
+        <p className="m-0 mb-2 text-[13px] font-semibold text-ink">{m.label} — 14 hari terakhir</p>
+        <BarChart times={m.times} empty={!m.available} />
+
+        {!m.available && (
+          <p className="m-0 mt-3 text-xs text-muted2">
+            Data pengunjung akan terisi setelah upgrade4.sql dijalankan dan mulai ada kunjungan baru.
+          </p>
+        )}
       </div>
-      {!visitStats && (
-        <p className="m-0 text-xs text-muted2">
-          Data pengunjung akan terisi setelah upgrade4.sql dijalankan dan mulai ada kunjungan baru.
-        </p>
-      )}
     </div>
   );
 }

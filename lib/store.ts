@@ -178,7 +178,7 @@ interface AppState {
   saveCategory: (input: CategoryInput) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
 
-  visitStats: { today: number; week: number; month: number; total: number } | null;
+  visitStats: { total: number; times: number[] } | null;
   logVisit: () => Promise<void>;
   loadStats: () => Promise<void>;
 }
@@ -965,27 +965,20 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   loadStats: async () => {
-    const dayMs = 86400000;
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const now = Date.now();
-    const windows = [
-      todayStart.toISOString(),
-      new Date(now - 7 * dayMs).toISOString(),
-      new Date(now - 30 * dayMs).toISOString(),
-      null,
-    ];
-    const countSince = async (iso: string | null): Promise<number | null> => {
-      let q = supabase.from("visits").select("*", { count: "exact", head: true });
-      if (iso) q = q.gte("created_at", iso);
-      const { count, error } = await q;
-      return error ? null : count ?? 0;
-    };
-    const [today, week, month, total] = await Promise.all(windows.map(countSince));
-    if (today === null) {
+    const since30 = new Date(Date.now() - 30 * 86400000).toISOString();
+    const [timesRes, totalRes] = await Promise.all([
+      supabase
+        .from("visits")
+        .select("created_at")
+        .gte("created_at", since30)
+        .order("created_at", { ascending: true }),
+      supabase.from("visits").select("*", { count: "exact", head: true }),
+    ]);
+    if (timesRes.error || totalRes.error) {
       set({ visitStats: null });
       return;
     }
-    set({ visitStats: { today, week: week ?? 0, month: month ?? 0, total: total ?? 0 } });
+    const times = (timesRes.data ?? []).map((r: any) => new Date(r.created_at).getTime());
+    set({ visitStats: { total: totalRes.count ?? times.length, times } });
   },
 }));
