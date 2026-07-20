@@ -45,7 +45,7 @@ export default function RankingPage() {
     <div className="mx-auto max-w-[900px] px-4 pb-16 pt-7 sm:px-8">
       <div className="mb-5.5">
         <h1 className="font-display m-0 mb-1 text-[32px] text-ink">Peringkat Resep</h1>
-        <p className="m-0 text-[15px] text-muted">Resep terbaik menurut komunitas Kulinara</p>
+        <p className="m-0 text-[15px] text-muted">10 resep terbaik menurut komunitas Kulinara</p>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2.5">
@@ -85,7 +85,7 @@ export default function RankingPage() {
         <EmptyState text="Tidak ada resep untuk kategori ini." />
       ) : (
         <div className="flex flex-col gap-3">
-          {list.map((recipe, i) => {
+          {list.slice(0, 10).map((recipe, i) => {
             const rating = recipeRatingAvg(bundle, recipe.id);
             const count = recipeRatingCount(bundle, recipe.id);
             return (

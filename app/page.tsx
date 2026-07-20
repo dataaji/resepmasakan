@@ -71,6 +71,22 @@ function HomeContent() {
     [list.length]
   );
 
+  const PAGE_SIZE = 12;
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageItems = list.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Kembali ke halaman 1 setiap kali filter berubah.
+  useEffect(() => {
+    setPage(1);
+  }, [filters.search, filters.category, filters.ingredient, filters.time, filters.difficulty, filters.sort]);
+
+  function goPage(p: number) {
+    setPage(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-7 sm:px-8">
       <div className="mb-7 pt-1.5">
@@ -205,11 +221,57 @@ function HomeContent() {
       {publicLoaded && list.length === 0 ? (
         <EmptyState text="Tidak ada resep yang cocok dengan filter kamu." />
       ) : (
-        <div className="grid gap-5.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>
-          {list.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-5.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>
+            {pageItems.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
+            ))}
+          </div>
+
+          {pageCount > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => goPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="rounded-full border-2 px-4 py-2 text-[13px] font-semibold disabled:opacity-40"
+                style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
+              >
+                Sebelumnya
+              </button>
+              {Array.from({ length: pageCount }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === pageCount || Math.abs(p - currentPage) <= 1)
+                .map((p, idx, arr) => (
+                  <span key={p} className="flex items-center">
+                    {idx > 0 && p - arr[idx - 1] > 1 && (
+                      <span className="px-1 text-muted2">…</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => goPage(p)}
+                      className="h-9 min-w-[36px] rounded-full border-2 px-2 text-[13px] font-semibold"
+                      style={
+                        p === currentPage
+                          ? { borderColor: "#FF5A36", background: "#FF5A36", color: "#fff" }
+                          : { borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }
+                      }
+                    >
+                      {p}
+                    </button>
+                  </span>
+                ))}
+              <button
+                type="button"
+                onClick={() => goPage(currentPage + 1)}
+                disabled={currentPage >= pageCount}
+                className="rounded-full border-2 px-4 py-2 text-[13px] font-semibold disabled:opacity-40"
+                style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
+              >
+                Selanjutnya
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
