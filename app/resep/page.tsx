@@ -572,6 +572,7 @@ function RecipeDetailContent() {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Tulis komentar..."
+            maxLength={2000}
             className="min-h-[44px] max-h-[120px] flex-1 resize-y rounded-xl2 border-2 px-3.5 py-2.5 text-sm"
             style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
           />

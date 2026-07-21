@@ -273,6 +273,7 @@ export default function RecipeForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="mis. Nasi Goreng Kampung"
+          maxLength={150}
           className="w-full rounded-xl2 border-2 px-3.5 py-2.5 text-[15px]"
           style={{ ...(errors.title ? errBorder : okBorder), background: "var(--card)", color: "var(--ink)" }}
         />
@@ -523,6 +524,7 @@ export default function RecipeForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="mis. bisa diganti santan kalau tidak ada susu"
+          maxLength={3000}
           className="min-h-[80px] w-full resize-y rounded-xl2 border-2 px-3.5 py-2.5 text-sm"
           style={{ borderColor: "var(--input-border)", background: "var(--card)", color: "var(--ink)" }}
         />
