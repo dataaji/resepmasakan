@@ -60,7 +60,7 @@ export default function BannerCarousel() {
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div
-            className="absolute inset-0"
+            className="pointer-events-none absolute inset-0"
             style={{
               background:
                 "linear-gradient(90deg, rgba(20,12,8,.82) 0%, rgba(20,12,8,.55) 45%, rgba(20,12,8,.15) 100%)",
@@ -72,7 +72,7 @@ export default function BannerCarousel() {
         type="button"
         onClick={() => go(-1)}
         aria-label="Sebelumnya"
-        className="absolute left-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border-none text-white backdrop-blur"
+        className="absolute left-3.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border-none text-white backdrop-blur"
         style={{ background: "rgba(255,255,255,.25)" }}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 16, height: 16 }}>
@@ -83,7 +83,7 @@ export default function BannerCarousel() {
         type="button"
         onClick={() => go(1)}
         aria-label="Selanjutnya"
-        className="absolute right-3.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border-none text-white backdrop-blur"
+        className="absolute right-3.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border-none text-white backdrop-blur"
         style={{ background: "rgba(255,255,255,.25)" }}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 16, height: 16 }}>
@@ -91,7 +91,7 @@ export default function BannerCarousel() {
         </svg>
       </button>
 
-      <div className="relative flex max-w-[600px] flex-col gap-2.5 px-12 py-6 text-white sm:px-20 sm:py-8">
+      <div className="pointer-events-none relative z-10 flex max-w-[600px] flex-col gap-2.5 px-12 py-6 text-white sm:px-20 sm:py-8">
         <span className="text-[11px] font-bold uppercase tracking-wider opacity-85">
           {banner.label}
         </span>
@@ -102,14 +102,14 @@ export default function BannerCarousel() {
         <button
           type="button"
           onClick={() => router.push(banner.href)}
-          className="mt-2 w-fit rounded-full border-none px-5 py-2.5 text-[13px] font-semibold"
+          className="pointer-events-auto mt-2 w-fit rounded-full border-none px-5 py-2.5 text-[13px] font-semibold"
           style={{ background: "#fff", color: "#2B2118" }}
         >
           {banner.ctaLabel}
         </button>
       </div>
 
-      <div className="absolute bottom-3.5 left-0 right-0 flex justify-center gap-1.5">
+      <div className="absolute bottom-3.5 left-0 right-0 z-20 flex justify-center gap-1.5">
         {banners.map((_, i) => (
           <button
             key={i}
